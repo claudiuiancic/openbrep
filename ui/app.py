@@ -20,9 +20,8 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 import streamlit as st
-from openbrep.hsf_project import HSFProject, ScriptType, GDLParameter
+from openbrep.hsf_project import HSFProject, ScriptType
 from openbrep.gdl_parser import parse_gdl_source, parse_gdl_file
-from openbrep.gdl_sanitizer import sanitize_llm_script_output
 from openbrep.paramlist_builder import build_paramlist_xml
 from openbrep.compiler import CompileResult, MockHSFCompiler
 from openbrep.validator import GDLValidator
@@ -34,7 +33,7 @@ except ImportError:
     VISION_MODELS = set()
     REASONING_MODELS = set()
     _MODEL_CONSTANTS_OK = False
-from openbrep.elicitation_agent import ElicitationAgent, ElicitationState
+from openbrep.elicitation_agent import ElicitationAgent
 from openbrep import __version__ as OPENBREP_VERSION
 from openbrep.runtime.pipeline import TaskPipeline, TaskRequest, build_generation_result_plan
 from openbrep.runtime.router import IntentRouter
@@ -61,6 +60,7 @@ from ui import local_file_dialog as ui_local_file_dialog
 from ui import object_naming as ui_object_naming
 from ui import project_snapshot as ui_project_snapshot
 from ui import runtime_service as ui_runtime_service
+from ui import script_application as ui_script_application
 from ui import session_defaults as ui_session_defaults
 from ui.views import chat_panel as ui_chat_panel
 from ui.views import editor_panel as ui_editor_panel
@@ -744,54 +744,25 @@ def _should_skip_elicitation_for_gdl_request(text: str, intent: str | None = Non
 
 
 def _handle_elicitation_route(user_input: str, gdl_obj_name: str) -> tuple[str, bool]:
-    ea = _ensure_elicitation_agent()
-
-    if ea.state == ElicitationState.HANDOFF and ea.spec is not None:
-        spec = ea.spec
-        instruction = spec.to_instruction()
-        logging.debug(f"Elicitation handoff instruction: {instruction[:200]}")
-        object_name = spec.object_name
-        ea.reset()
-        st.session_state.elicitation_state = ea.state.value
-        if not st.session_state.project:
-            _make_generation_project(gdl_obj_name or object_name or "elicited_object")
-            st.info(f"📁 已初始化项目 `{st.session_state.pending_gsm_name}`")
-        proj_current = st.session_state.project
-        effective_gsm = st.session_state.pending_gsm_name or proj_current.name
-        return run_agent_generate(
+    return ui_chat_controller.handle_elicitation_route(
+        user_input=user_input,
+        gdl_obj_name=gdl_obj_name,
+        session_state=st.session_state,
+        ensure_elicitation_agent_fn=_ensure_elicitation_agent,
+        make_generation_project_fn=_make_generation_project,
+        run_agent_generate_fn=lambda instruction, project, container, gsm, auto_apply: run_agent_generate(
             instruction,
-            proj_current,
-            st.container(),
-            gsm_name=effective_gsm,
-            auto_apply=True,
-        ), False
-
-    if ea.state == ElicitationState.SPEC_READY:
-        if _is_positive_confirmation(user_input):
-            spec = ea.confirm(True)
-            st.session_state.elicitation_state = ea.state.value
-            if spec is None:
-                return "❌ 规格确认失败，请重试。", True
-            return _handle_elicitation_route(user_input, spec.object_name)
-        if _is_negative_confirmation(user_input):
-            ea.confirm(False)
-            st.session_state.elicitation_state = ea.state.value
-            reply, _ = ea.respond(user_input)
-            st.session_state.elicitation_state = ea.state.value
-            return reply, True
-        return ea._format_spec_summary(), True
-
-    if ea.state == ElicitationState.ELICITING:
-        reply, _ = ea.respond(user_input)
-        st.session_state.elicitation_state = ea.state.value
-        return reply, True
-
-    if _should_start_elicitation(user_input):
-        reply = ea.start(user_input)
-        st.session_state.elicitation_state = ea.state.value
-        return reply, True
-
-    return "", False
+            project,
+            container,
+            gsm_name=gsm,
+            auto_apply=auto_apply,
+        ),
+        container_fn=st.container,
+        info_fn=st.info,
+        is_positive_confirmation_fn=_is_positive_confirmation,
+        is_negative_confirmation_fn=_is_negative_confirmation,
+        should_start_elicitation_fn=_should_start_elicitation,
+    )
 
 
 
@@ -897,120 +868,24 @@ def run_agent_generate(
 
 
 def _parse_paramlist_text(text: str) -> list:
-    """
-    Parse 'Type Name = Value ! Description' lines → list[GDLParameter].
-    Handles LLM output from [FILE: paramlist.xml] sections.
-    """
-    import re as _re
-    _VALID_TYPES = {
-        "Length", "Angle", "RealNum", "Integer", "Boolean",
-        "String", "PenColor", "FillPattern", "LineType", "Material",
-    }
-    params = []
-    for line in text.splitlines():
-        line = line.strip()
-        if not line or line.startswith("!") or line.startswith("#"):
-            continue
-        # Format: Type Name = Value  [! description]
-        m = _re.match(r'(\w+)\s+(\w+)\s*=\s*(.+?)(?:\s*!\s*(.*))?$', line)
-        if m:
-            ptype, pname, pval, pdesc = m.groups()
-            if ptype in _VALID_TYPES:
-                params.append(GDLParameter(
-                    pname, ptype, (pdesc or "").strip(), pval.strip().strip('"'),
-                ))
-    return params
+    return ui_script_application.parse_paramlist_text(text)
 
 
 def _sanitize_script_content(raw: str, fpath: str) -> str:
-    """Best-effort sanitize to avoid narrative text leaking into script editors."""
-    import re as _re
-
-    text = (raw or "").strip()
-    if not text:
-        return ""
-
-    # Remove fenced blocks and trailing markdown prose leaked into script content.
-    text = sanitize_llm_script_output(text, fpath)
-
-    # If model accidentally included nested [FILE:] in content, keep only before next header
-    _next_header = _re.search(r"(?m)^\s*\[FILE:\s*.+?\]\s*$", text)
-    if _next_header:
-        text = text[:_next_header.start()].rstrip()
-
-    # For GDL scripts: only drop obvious markdown/prose artifacts.
-    # Keep unknown commands and non-ASCII string literals to avoid accidental data loss.
-    if fpath.startswith("scripts/"):
-        kept = []
-        _prose_prefix = _re.compile(r"^(分析|说明|原因|修复|结论|总结)\s*[:：]")
-        _numbered_md = _re.compile(r"^\d+\.\s+")
-
-        for ln in text.splitlines():
-            s = ln.strip()
-            if not s:
-                kept.append(ln)
-                continue
-            if s.startswith(("#", "##", "###", "- ", "* ", ">")):
-                continue
-            if _numbered_md.match(s):
-                continue
-            if _prose_prefix.match(s):
-                continue
-            kept.append(ln)
-        text = "\n".join(kept).strip()
-
-    return text
+    return ui_script_application.sanitize_script_content(raw, fpath)
 
 
 def _apply_scripts_to_project(proj: HSFProject, script_map: dict) -> tuple[int, int]:
-    """
-    Apply {fpath: content} dict to project.
-    Handles scripts/3d.gdl etc. + paramlist.xml.
-    Returns (script_count, param_count) for notification.
-    """
-    _label_map = {
-        "scripts/3d.gdl": "3D",
-        "scripts/2d.gdl": "2D",
-        "scripts/1d.gdl": "Master",
-        "scripts/vl.gdl": "Param",
-        "scripts/ui.gdl": "UI",
-        "scripts/pr.gdl": "Properties",
-    }
-
-    # 命中脚本文件即视为一次脚本更新（即便内容清洗后为空，也属于覆盖写入）
-    has_script_update = any(
-        fpath in script_map
-        for _, fpath, _ in _SCRIPT_MAP
+    return ui_script_application.apply_scripts_to_project(
+        proj,
+        script_map,
+        session_state=st.session_state,
+        script_entries=_SCRIPT_MAP,
+        stamp_script_header_fn=_stamp_script_header,
+        parse_paramlist_text_fn=_parse_paramlist_text,
+        sanitize_script_content_fn=_sanitize_script_content,
+        clear_pending_preview_state_fn=ui_proposed_preview_controller.clear_pending_preview_state,
     )
-    if has_script_update:
-        st.session_state.script_revision = int(st.session_state.get("script_revision", 0)) + 1
-    _rev = int(st.session_state.get("script_revision", 0))
-
-    sc = 0
-    for stype, fpath, _label in _SCRIPT_MAP:
-        if fpath in script_map:
-            _clean = _sanitize_script_content(script_map[fpath], fpath)
-            _script_label = _label_map.get(fpath, _label)
-            # 命中文件必须全覆盖写入：清洗后为空则写成真正空脚本
-            _final = _stamp_script_header(_script_label, _clean, _rev) if _clean else ""
-            proj.set_script(stype, _final)
-            sc += 1
-    pc = 0
-    if "paramlist.xml" in script_map:
-        new_params = _parse_paramlist_text(script_map["paramlist.xml"])
-        if new_params:
-            proj.parameters = new_params
-            pc = len(new_params)
-
-    if sc > 0 or pc > 0:
-        st.session_state.preview_2d_data = None
-        st.session_state.preview_3d_data = None
-        st.session_state.preview_warnings = []
-        st.session_state.preview_meta = {"kind": "", "timestamp": ""}
-        ui_proposed_preview_controller.clear_pending_preview_state(st.session_state)
-        proj.save_to_disk()
-
-    return sc, pc
 
 
 def _project_service() -> ui_project_service.ProjectService:

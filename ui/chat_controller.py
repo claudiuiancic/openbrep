@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from typing import Callable
 
+from openbrep.elicitation_agent import ElicitationState
 from openbrep.learning import ErrorLearningStore, looks_like_error_report
 
 from ui.chat_render import render_assistant_block, render_user_bubble
@@ -413,6 +414,81 @@ def run_normal_text_path(
         return True, True, None
     finally:
         session_state.agent_running = False
+
+
+def handle_elicitation_route(
+    *,
+    user_input: str,
+    gdl_obj_name: str,
+    session_state,
+    ensure_elicitation_agent_fn: Callable[[], object],
+    make_generation_project_fn: Callable[[str], object],
+    run_agent_generate_fn: Callable[[str, object, object, str, bool], str],
+    container_fn: Callable[[], object],
+    info_fn: Callable[[str], None],
+    is_positive_confirmation_fn: Callable[[str], bool],
+    is_negative_confirmation_fn: Callable[[str], bool],
+    should_start_elicitation_fn: Callable[[str], bool],
+) -> tuple[str, bool]:
+    agent = ensure_elicitation_agent_fn()
+
+    if agent.state == ElicitationState.HANDOFF and agent.spec is not None:
+        spec = agent.spec
+        instruction = spec.to_instruction()
+        object_name = spec.object_name
+        agent.reset()
+        session_state.elicitation_state = agent.state.value
+        if not session_state.project:
+            make_generation_project_fn(gdl_obj_name or object_name or "elicited_object")
+            info_fn(f"📁 已初始化项目 `{session_state.pending_gsm_name}`")
+        project = session_state.project
+        effective_gsm = session_state.pending_gsm_name or project.name
+        return run_agent_generate_fn(
+            instruction,
+            project,
+            container_fn(),
+            effective_gsm,
+            True,
+        ), False
+
+    if agent.state == ElicitationState.SPEC_READY:
+        if is_positive_confirmation_fn(user_input):
+            spec = agent.confirm(True)
+            session_state.elicitation_state = agent.state.value
+            if spec is None:
+                return "❌ 规格确认失败，请重试。", True
+            return handle_elicitation_route(
+                user_input=user_input,
+                gdl_obj_name=spec.object_name,
+                session_state=session_state,
+                ensure_elicitation_agent_fn=ensure_elicitation_agent_fn,
+                make_generation_project_fn=make_generation_project_fn,
+                run_agent_generate_fn=run_agent_generate_fn,
+                container_fn=container_fn,
+                info_fn=info_fn,
+                is_positive_confirmation_fn=is_positive_confirmation_fn,
+                is_negative_confirmation_fn=is_negative_confirmation_fn,
+                should_start_elicitation_fn=should_start_elicitation_fn,
+            )
+        if is_negative_confirmation_fn(user_input):
+            agent.confirm(False)
+            session_state.elicitation_state = agent.state.value
+            reply, _ = agent.respond(user_input)
+            session_state.elicitation_state = agent.state.value
+            return reply, True
+        return agent._format_spec_summary(), True
+
+    if agent.state == ElicitationState.ELICITING:
+        reply, _ = agent.respond(user_input)
+        session_state.elicitation_state = agent.state.value
+        return reply, True
+
+    if should_start_elicitation_fn(user_input):
+        reply = agent.start(user_input)
+        session_state.elicitation_state = agent.state.value
+        return reply, True
+
+    return "", False
 
 
 def run_vision_path(
