@@ -61,7 +61,7 @@ BRICK 1.5, 0.8, 2.0   ! same as BLOCK
 
 - **Zero dimension**: if any of `a`, `b`, `c` is zero, the box degenerates (face, edge, or point). ArchiCAD will render it but it may be invisible or cause selection issues.
 - **All dimensions zero**: no geometry produced.
-- **Negative dimensions**: treats as absolute value (GDL normalizes to positive).
+- **Negative dimensions**: invalid for professional generation. The official constraint is `a >= 0, b >= 0, c >= 0` and at least one dimension must be non-zero.
 - **Cannot be hollow**: use [[PRISM_]] with holes or boolean operations with [[ADD_DEL]] for hollow boxes.
 - **Always axis-aligned**: rotated boxes need `ROT` in the [[Transformation_Stack]] before `BLOCK`.
 - **Performance**: `BLOCK` is the fastest 3D primitive in ArchiCAD — prefer it over [[PRISM_]] when the shape is rectangular.

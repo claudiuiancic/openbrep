@@ -42,6 +42,25 @@ class TestKnowledgeLint(unittest.TestCase):
 
         self.assertEqual(result, 1)
 
+    def test_officially_verified_wiki_pages_do_not_reintroduce_pseudo_syntax(self):
+        root = Path(__file__).parent.parent / "knowledge" / "wiki"
+
+        revolve = (root / "REVOLVE.md").read_text(encoding="utf-8")
+        sweep = (root / "SWEEP.md").read_text(encoding="utf-8")
+        project2 = (root / "PROJECT2.md").read_text(encoding="utf-8")
+        hotspot2 = (root / "HOTSPOT2.md").read_text(encoding="utf-8")
+        block = (root / "BLOCK.md").read_text(encoding="utf-8")
+
+        self.assertIn("REVOLVE n, alpha, mask", revolve)
+        self.assertNotIn("```gdl\nREVOLVE id, angle", revolve)
+        self.assertIn("SWEEP n, m, alpha, scale, mask", sweep)
+        self.assertNotIn("```gdl\nSWEEP path_id, sections_id", sweep)
+        self.assertIn("PROJECT2 projection_code, angle, method", project2)
+        self.assertNotIn("PROJECT2 [options]", project2)
+        self.assertIn("HOTSPOT2 x, y [, unID", hotspot2)
+        self.assertNotIn('HOTSPOT2 x, y, paramName', hotspot2)
+        self.assertIn("a >= 0, b >= 0, c >= 0", block)
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -8,93 +8,86 @@ source: raw/ccgdl_dev_doc/docs/GDL_10_3D_Commands_Full.md
 
 # REVOLVE
 
-`REVOLVE` creates a 3D solid by rotating a 2D cross-section around an axis. This is the GDL equivalent of a lathe operation — ideal for balusters, vases, domes, columns with fluting, and any rotationally-symmetric geometry.
+`REVOLVE` creates a 3D surface or body by rotating a polyline defined in the x-y plane around the x-axis. This is the GDL equivalent of a lathe operation — useful for balusters, vases, domes, turned columns, and rotationally-symmetric details.
 
 ## Syntax
 
 ```gdl
-REVOLVE id, angle [, contour]
+REVOLVE n, alpha, mask, x1, y1, s1, ..., xn, yn, sn
+REVOLVE{2} n, alphaOffset, alpha, mask, sideMat,
+        x1, y1, s1, mat1, ..., xn, yn, sn, matn
 ```
 
-| Param    | Type    | Description                                              |
-|----------|---------|----------------------------------------------------------|
-| `id`     | integer | ID of the 2D profile definition (POLY-based)             |
-| `angle`  | numeric | Sweep angle in degrees (positive = CCW, negative = CW)   |
-| `contour`| integer | Optional — 0: solid (default), 1: contour/surface only   |
+| Param   | Type    | Description                                      |
+|---------|---------|--------------------------------------------------|
+| `n`     | integer | Number of profile polyline nodes                 |
+| `alpha` | angle   | Rotation angle in degrees                        |
+| `mask`  | integer | Controls closing polygons and edge visibility    |
+| `x, y`  | length  | Profile node coordinates in the x-y plane        |
+| `s`     | integer | Status of latitudinal arcs from the node         |
 
 ## Profile Definition
 
-The 2D profile must be defined in the **YZ plane** (X is the rotation axis):
+The profile is written inline in the `REVOLVE` command. It is a polyline in the x-y plane, rotated around the x-axis. The official basic `REVOLVE` profile cannot contain holes.
 
 ```gdl
-POLY2 id, n, 1,
-    y1, z1, 1,
-    y2, z2, 1,
-    ...
+REVOLVE 4, 360, 63,
+    0.00, 0.00, 0,
+    0.05, 0.00, 0,
+    0.04, 0.40, 0,
+    0.00, 0.40, 0
 ```
 
 - **X-axis** = rotation axis.
-- **Y** = radius from the rotation axis.
-- **Z** = height along the rotation axis.
-- Points with `Y = 0` lie exactly on the rotation axis.
+- **Y** = radius from the rotation axis in the profile plane.
+- Points with `Y = 0` lie on the rotation axis.
 
 ## Examples
 
 ### Simple hemisphere
 
 ```gdl
-! Quarter-circle profile
-POLY2 1, 5, 1,
-    0.5, 0,   1,
-    0.5, 0.2, 1,
-    0.4, 0.4, 1,
-    0.2, 0.5, 1,
-    0,   0.5, 1
-
-! Sweep 180 degrees
-REVOLVE 1, 180
+REVOLVE 5, 180, 63,
+    0.0, 0.0, 0,
+    0.2, 0.5, 0,
+    0.4, 0.4, 0,
+    0.5, 0.2, 0,
+    0.5, 0.0, 0
 ```
 
 ### Full baluster
 
 ```gdl
-! Baluster profile (YZ plane)
-POLY2 1, 8, 1,
-    0.03, 0,    1,
-    0.05, 0.05, 1,
-    0.05, 0.4,  1,
-    0.03, 0.5,  1,
-    0.03, 0.7,  1,
-    0.06, 0.75, 1,
-    0.06, 0.9,  1,
-    0,    0.95, 1
-
-! Full 360-degree revolved solid
-REVOLVE 1, 360
+REVOLVE 8, 360, 63,
+    0.00, 0.00, 0,
+    0.03, 0.05, 0,
+    0.05, 0.40, 0,
+    0.03, 0.50, 0,
+    0.03, 0.70, 0,
+    0.06, 0.75, 0,
+    0.06, 0.90, 0,
+    0.00, 0.95, 0
 ```
 
 ### Partial revolve (contour mode)
 
 ```gdl
-POLY2 1, 4, 1,
-    0.3, 0,   1,
-    0.3, 0.5, 1,
-    0,   0.5, 1,
-    0,   0,   1
-
-! 90-degree surface (not solid)
-REVOLVE 1, 90, 1
+REVOLVE 4, 90, 63,
+    0.0, 0.0, 0,
+    0.3, 0.0, 0,
+    0.3, 0.5, 0,
+    0.0, 0.5, 0
 ```
 
 ## Edge Cases & Traps
 
-- **Profile must be in YZ**: GDL uses X as the rotation axis. If you define the profile in XY, the revolve produces unexpected geometry.
+- **Profile is inline**: do not generate `POLY2 id` + `REVOLVE id, angle`; that is not the official `REVOLVE` syntax.
 - **Points on axis**: vertices with `Y = 0` lie on the rotation axis. Two adjacent points with `Y = 0` may produce degenerate triangles at the pole — use a single point on the axis, or offset slightly (`Y = 0.001`).
 - **Full 360°**: `angle = 360` creates a closed ring. The end faces seal automatically.
 - **Concave profiles**: profiles that curve inward (negative slope toward the axis) can self-intersect during revolve. Keep profiles convex or test carefully.
 - **Zero radius segments**: a profile segment that lies exactly on the axis (`Y = 0` for its full length) collapses to a line and produces no surface.
 - **Large angles**: `angle > 360` is valid but wasteful — the extra rotation overlaps existing geometry.
-- **Negative angle**: rotates clockwise. Combine with mirror transforms if needed.
+- **Holes**: the basic `REVOLVE` profile cannot contain holes. Use advanced variants only when the syntax is explicitly supported.
 
 ## Optimization
 

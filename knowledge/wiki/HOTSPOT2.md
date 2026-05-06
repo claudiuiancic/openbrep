@@ -17,43 +17,47 @@ Parameters are powerful, but changing a value in the dialog box is slow. With `H
 ## Syntax
 
 ```gdl
-HOTSPOT2 x, y                    ! fixed hotspot (non-editable)
-HOTSPOT2 x, y, paramName         ! editable, linked to parameter
+HOTSPOT2 x, y [, unID [, paramReference [, flags [, displayParam [, "customDescription"]]]]]
 ```
 
-| Param       | Type   | Description                                      |
-|-------------|--------|--------------------------------------------------|
-| `x, y`      | length | Position in 2D (plan view coordinates)           |
-| `paramName` | string | Optional — parameter to modify when dragged      |
+| Param               | Type    | Description                                                   |
+|---------------------|---------|---------------------------------------------------------------|
+| `x, y`              | length  | Position in 2D plan coordinates                               |
+| `unID`              | integer | Unique hotspot identifier in the 2D Script                    |
+| `paramReference`    | param   | Parameter edited by graphical hotspot editing                 |
+| `flags`             | integer | Hotspot type and attributes                                   |
+| `displayParam`      | param   | Parameter displayed in the information palette while editing  |
+| `customDescription` | string  | Custom label for the displayed parameter                      |
 
-When no `paramName` is given, the hotspot is fixed (visual reference only). When a parameter name is provided, dragging the hotspot sets that parameter's value.
+When only `x, y` are given, the hotspot is a fixed selection/reference point. Editable hotspots require the official graphical-editing pattern: length editing needs base, moving and reference hotspots with matching `paramReference` and appropriate `flags`.
 
 ## Examples
 
 ### Rectangle with editable width and depth
 
 ```gdl
-HOTSPOT2 0, 0         ! fixed origin
-HOTSPOT2 A, 0, "A"    ! editable — drag to change width
-HOTSPOT2 A, B, "B"    ! editable — drag to change depth
-HOTSPOT2 0, B         ! fixed reference
+HOTSPOT2 0, 0, 1
+HOTSPOT2 A, 0, 2
+HOTSPOT2 A, -0.1, 3, A, 3
+HOTSPOT2 A, 0, 4, A, 2
 ```
 
 ### Corner hotspot
 
 ```gdl
 ! A single corner stretch for a rectangular column
-HOTSPOT2 0, 0
-HOTSPOT2 A, 0, "A"
-HOTSPOT2 0, B, "B"
-HOTSPOT2 A, B         ! visual reference, not editable
+HOTSPOT2 0, 0, 1
+HOTSPOT2 A, 0, 2
+HOTSPOT2 A, B, 3
+HOTSPOT2 0, B, 4
 ```
 
 ## Edge Cases & Traps
 
 - **HOTSPOT2 in 3D script**: hotspots only work in the 2D script. Placing them in the 3D script has no effect.
 - **Overlapping hotspots**: if two hotspots share the same position, the last one defined takes precedence for dragging. This can cause confusing behavior — avoid duplicates.
-- **Parameter type**: the linked parameter must be a numeric type (Length, Angle, etc.). Boolean parameters cannot be driven by hotspots.
+- **Parameter type**: the linked `paramReference` must be a compatible numeric parameter. Boolean parameters cannot be driven by stretch hotspots.
+- **Editable hotspots require a set**: for length editing, define base, moving and reference hotspots. A single `HOTSPOT2 x, y, "A"` is not the official editable pattern.
 - **Angle hotspots**: for angle parameters, place the hotspot at the endpoint of a radius and link the rotation to the angle parameter in the Parameter script.
 - **No visual feedback**: hotspots themselves are just invisible interaction points. Draw visible geometry ([[PROJECT2]], `RECT2`, etc.) separately to show the user what they're dragging.
 - **Coordinate system**: hotspot positions are in the 2D script's coordinate space, which may differ from the 3D script's [[Transformation_Stack]].
@@ -65,11 +69,10 @@ A well-designed GDL object provides hotspots for every primary dimension paramet
 ```gdl
 ! Origin (always)
 HOTSPOT2 0, 0
-! Width stretch
-HOTSPOT2 A, 0, "A"
-! Depth stretch
-HOTSPOT2 0, B, "B"
-! Height (shown as annotation if applicable)
+! Width stretch: base/reference/moving pattern
+HOTSPOT2 A, 0, 11, A, 1
+HOTSPOT2 A, -0.1, 12, A, 3
+HOTSPOT2 A, 0, 13, A, 2
 ```
 
 ## Related

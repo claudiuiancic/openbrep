@@ -13,10 +13,11 @@ source: knowledge/GDL_3d_commands.md
 ## Syntax
 
 ```gdl
-MATERIAL material_parameter
+[SET] MATERIAL name_string
+[SET] MATERIAL index
 ```
 
-The argument should usually be a Material parameter from `paramlist.xml`, not a hard-coded attribute index. This keeps generated objects editable in Archicad.
+The `SET` keyword is optional in GDL command syntax. For generated OpenBrep objects, prefer a Material parameter from `paramlist.xml` as the value used after `MATERIAL`, not a hard-coded attribute index. This keeps objects editable across Archicad projects.
 
 ## Example
 
@@ -34,6 +35,8 @@ BLOCK A, B, ZZYZX
 ## Edge Cases & Traps
 
 - `MATERIAL` affects geometry generated after the command until another material is set.
+- If there is no material statement, the official default is `MATERIAL 0`.
+- Material index `0` means surfaces use the current pen color with a matte appearance.
 - A missing material parameter in `paramlist.xml` can compile or runtime-fail depending on the generated HSF structure.
 - Do not use `MATERIAL` as a substitute for semantic part separation; still name parameters and geometry blocks clearly.
 

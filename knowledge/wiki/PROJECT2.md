@@ -17,18 +17,22 @@ Manually drawing the 2D plan with `RECT2`, `LINE2`, `CIRCLE2`, etc. is tedious a
 ## Syntax
 
 ```gdl
-PROJECT2 [options]
+PROJECT2 projection_code, angle, method
+PROJECT2{2} projection_code, angle, method [, backgroundColor, fillOrigoX, fillOrigoY, filldirection]
+PROJECT2{3} projection_code, angle, method, parts [, backgroundColor, fillOrigoX, fillOrigoY, filldirection] [[,] PARAMETERS name1=value1, ..., namen=valuen]
 ```
 
-`PROJECT2` has no arguments in its simplest form — it automatically projects the 3D geometry onto the XY plane with the current cut plane height.
+The standard top-view floor plan projection used by OpenBrep is:
 
 ```gdl
-PROJECT2
+PROJECT2 3, 270, 2
 ```
+
+`projection_code = 3` means top view. `method = 2` means hidden lines. This is the reliable default for generated library parts that need a quick 2D representation from the 3D script.
 
 ## Cut Plane Behavior
 
-`PROJECT2` respects the ArchiCAD floor plan cut plane. Elements intersected by the cut plane are shown with cut lines; elements below appear as projected outlines.
+`PROJECT2` creates a projection of the 3D script in the same library part and adds the generated lines to the 2D parametric symbol.
 
 To control the cut plane from GDL:
 
@@ -67,7 +71,8 @@ LINE2 A, 0, 0, B
 ## Edge Cases & Traps
 
 - **Performance**: `PROJECT2` must evaluate the full 3D script internally. For objects with complex 3D (loops, many primitives), the projection can be slow. Consider caching the result or using manual 2D.
-- **Only XY projection**: `PROJECT2` works on the XY plane only. It does not produce elevation or section views.
+- **Arguments are required**: do not emit bare `PROJECT2`; use `PROJECT2 3, 270, 2` for the common top-view hidden-line plan.
+- **Projection code matters**: `3` is top view, `-3` is bottom view, and other official codes produce side or axonometric views.
 - **No style control**: you cannot control line type, pen, or fill from `PROJECT2` directly. Use `PEN`, `LINE_TYPE`, `FILL` before calling it.
 - **Interaction with HOTSPOT2**: `PROJECT2` draws lines, not hotspots. You must place [[HOTSPOT2]] separately for interactive editing.
 - **Empty 2D script**: if the 2D script is empty and `PROJECT2` is missing, the object has no floor plan display.
