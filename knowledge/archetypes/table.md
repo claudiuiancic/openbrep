@@ -7,7 +7,7 @@ object_types: [table, desk, 桌, 桌子, 书桌, 餐桌, 会议桌]
 commands: [BLOCK, CYLIND, ADDX, ADDY, ADDZ, DEL, FOR, NEXT, MATERIAL, PROJECT2, HOTSPOT2]
 script_types: [3d, 2d, param]
 priority: 80
-verified: false
+verified: true
 tags: [furniture, table, parametric]
 ---
 
@@ -44,6 +44,7 @@ tags: [furniture, table, parametric]
 - 每条腿使用独立 `ADD/DEL` 定位。
 - `leg_inset` 应小于 A/B 的一半。
 - 横撑高度应由参数或合理默认推导。
+- 默认不用 `REVOLVE`、`SWEEP`、`GROUP` 或低层 mesh primitive。
 
 ## 2D 策略
 
@@ -56,3 +57,9 @@ tags: [furniture, table, parametric]
 - 桌腿高度不能为负。
 - 桌腿内缩不能超过桌面尺寸。
 - 圆腿用 `CYLIND` 时注意当前坐标系和高度方向。
+
+## 已校对命令边界
+
+- 方桌、会议桌、书桌默认使用 `BLOCK` 板件和腿件。
+- 圆腿可以使用 `CYLIND h, r`，需要先用 `ADD` 定位并用 `DEL` 清理。
+- 旋转雕花腿属于 `profile_object` 或高级细化阶段，不是桌子 archetype 的默认输出。

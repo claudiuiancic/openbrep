@@ -134,6 +134,34 @@ class TestKnowledgeLint(unittest.TestCase):
         self.assertNotIn('HOTSPOT2 x, y, paramName', hotspot2)
         self.assertIn("a >= 0, b >= 0, c >= 0", block)
 
+    def test_verified_archetypes_stay_on_reviewed_command_paths(self):
+        root = Path(__file__).parent.parent / "knowledge" / "archetypes"
+        archetype_names = [
+            "bookshelf",
+            "cabinet",
+            "table",
+            "door",
+            "window",
+            "profile_object",
+        ]
+        texts = {
+            name: (root / f"{name}.md").read_text(encoding="utf-8")
+            for name in archetype_names
+        }
+
+        for name, text in texts.items():
+            self.assertIn("verified: true", text, name)
+            self.assertNotIn("POLY2_", text, name)
+            self.assertNotIn("GLOBALS SYMBOL", text, name)
+
+        self.assertIn("不使用 `GROUP`、`BODY/EDGE/PGON`", texts["bookshelf"])
+        self.assertIn("默认柜体不用 `GROUP`", texts["cabinet"])
+        self.assertIn("默认不用 `REVOLVE`、`SWEEP`、`GROUP`", texts["table"])
+        self.assertIn("不默认生成 `GROUP` Boolean", texts["door"])
+        self.assertIn("不默认生成 `GROUP` Boolean", texts["window"])
+        self.assertIn("`REVOLVE` 和 `SWEEP` 属于高级非默认命令", texts["profile_object"])
+        self.assertIn("简单圆柱优先用 `CYLIND`", texts["profile_object"])
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -7,7 +7,7 @@ object_types: [door, 门, 门扇, 门框]
 commands: [BLOCK, ADDX, ADDY, ADDZ, ROTZ, DEL, MATERIAL, PROJECT2, HOTSPOT2]
 script_types: [3d, 2d, param]
 priority: 82
-verified: false
+verified: true
 tags: [door, hosted-object, building-element]
 ---
 
@@ -44,6 +44,7 @@ tags: [door, hosted-object, building-element]
 - 门框应围绕门洞边界，避免超出 A/ZZYZX。
 - 门扇厚度沿 B 方向表达。
 - 墙宿主逻辑属于进阶能力，不应在不确定时硬写复杂洞口逻辑。
+- 不通过脚本变量伪造 Archicad 门类型；真实门窗能力依赖 subtype 和宿主元数据。
 
 ## 2D 策略
 
@@ -56,3 +57,9 @@ tags: [door, hosted-object, building-element]
 - 门对象如果作为普通 OBJECT 插入，不会自动产生墙洞。
 - 开启方向不能只靠 3D 几何表达，2D 符号更重要。
 - `opening_angle` 应有合理范围。
+
+## 已校对命令边界
+
+- 默认输出可作为普通对象可视化的门构件：门框、门扇、2D 开启符号和热点。
+- 不默认生成 `GROUP` Boolean、`CUTFORM`、低层 mesh 或未经确认的墙洞逻辑。
+- 如果用户明确要求 Archicad 原生门行为，应先提示需要门 subtype、墙宿主和开洞策略，而不是只生成几何体。

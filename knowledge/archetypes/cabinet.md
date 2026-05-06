@@ -7,7 +7,7 @@ object_types: [cabinet, cupboard, 柜, 柜体, 收纳柜, 鞋柜, 橱柜]
 commands: [BLOCK, PRISM_, ADDX, ADDY, ADDZ, DEL, FOR, NEXT, MATERIAL, PROJECT2, HOTSPOT2]
 script_types: [3d, 2d, param]
 priority: 85
-verified: false
+verified: true
 tags: [furniture, storage, parametric]
 ---
 
@@ -47,6 +47,8 @@ tags: [furniture, storage, parametric]
 - 派生参数应计算内宽、内高、单门宽、层板间距。
 - 门板应略微前置，避免与柜体共面闪烁。
 - `has_doors`、`has_handles` 应控制门板和把手是否生成。
+- 默认柜体不用 `GROUP`、`BODY/EDGE/PGON` 或 mesh primitive。
+- `PRISM_` 只用于异形侧板、踢脚缺口或非矩形面板；普通板件仍用 `BLOCK`。
 
 ## 2D 策略
 
@@ -60,3 +62,9 @@ tags: [furniture, storage, parametric]
 - 板厚不能大于总宽度或总高度。
 - 门板和柜体共面容易显示异常，应有微小前移。
 - 循环生成门板和层板时必须保证 `FOR/NEXT` 配对。
+
+## 已校对命令边界
+
+- 柜体主体优先使用 `BLOCK`，保证参数化和可维护性。
+- 把手可先用 `BLOCK`，圆形把手可用已校对的 `CYLIND h, r`，不能写成多参数圆锥语法。
+- 高级命令必须有明确造型理由，不能因为“更高级”而默认使用。

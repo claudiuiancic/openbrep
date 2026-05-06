@@ -7,7 +7,7 @@ object_types: [bookshelf, shelf, bookcase, 书架, 书柜]
 commands: [BLOCK, ADDX, ADDY, ADDZ, DEL, FOR, NEXT, MATERIAL, PROJECT2, HOTSPOT2]
 script_types: [3d, 2d, param]
 priority: 90
-verified: false
+verified: true
 tags: [board-assembly, furniture, parametric]
 ---
 
@@ -51,7 +51,7 @@ tags: [board-assembly, furniture, parametric]
 
 - 至少生成四个外包络 `HOTSPOT2`，保证平面可选中。
 - 可用 `PROJECT2 3, 270, 2` 快速获得 2D 投影。
-- 工程化版本可进一步用 `RECT2` 或 `POLY2_` 绘制简化平面符号。
+- 工程化版本可进一步用 `RECT2` 或 `POLY2` 绘制简化平面符号。
 
 ## 常见风险
 
@@ -59,3 +59,9 @@ tags: [board-assembly, furniture, parametric]
 - `_inner_w = A - 2 * frame_thk` 可能为负。
 - `ADD/DEL` 数量不平衡会导致后续板件位置错误。
 - 参数名必须和 `paramlist.xml` 完全一致。
+
+## 已校对命令边界
+
+- 默认只使用已校对的 `BLOCK`、`ADD/DEL`、`FOR/NEXT`、`MATERIAL`、`PROJECT2`、`HOTSPOT2`。
+- 不使用 `GROUP`、`BODY/EDGE/PGON` 或 mesh primitive 表达普通板式书架。
+- 不使用 `SWEEP` / `REVOLVE`，除非用户明确要求曲线或旋转装饰构件。

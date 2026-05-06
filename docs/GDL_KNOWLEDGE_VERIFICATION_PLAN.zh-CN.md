@@ -64,7 +64,7 @@ python scripts/verify_gdl_knowledge_sources.py \
 | P3 已完成 | 2D 表达 | `2D_Primitives`、`PROJECT2`、`HOTSPOT2` | 校对平面符号、热点编辑、投影策略 |
 | P4 已完成 | 参数与属性 | `Paramlist_XML`、`DEFINE`、`MATERIAL`、`GLOBALS`、`Object_Types` | 校对参数类型、材质/属性、对象类型、全局变量 |
 | P5 已完成 | Group / 高级几何 | `GROUP`、`SWEEP`、`REVOLVE`、`BODY_EDGE_PGON` | 确认高级命令只在有把握时用于生成 |
-| P6 | 构件 archetype | `bookshelf`、`cabinet`、`table`、`door`、`window`、`profile_object` | 让构件知识只引用已校对命令，修正不合理建模策略 |
+| P6 已完成 | 构件 archetype | `bookshelf`、`cabinet`、`table`、`door`、`window`、`profile_object` | 让构件知识只引用已校对命令，修正不合理建模策略 |
 
 ## 每批验收标准
 
@@ -180,3 +180,28 @@ knowledge/wiki/BODY_EDGE_PGON.md
 - `tests/test_knowledge_lint.py` 增加 P5 语法防回退断言。
 
 P5 完成后再进入 P6，不并行铺开。
+
+## P6 完成记录
+
+已校对：
+
+```text
+knowledge/archetypes/bookshelf.md
+knowledge/archetypes/cabinet.md
+knowledge/archetypes/table.md
+knowledge/archetypes/door.md
+knowledge/archetypes/window.md
+knowledge/archetypes/profile_object.md
+```
+
+完成结果：
+
+- 六个 archetype 均标记为 `verified: true`。
+- `bookshelf` 删除错误 `POLY2_` 建议，明确普通板式书架不用 group、mesh、sweep、revolve。
+- `cabinet` 明确主体优先 `BLOCK`，`PRISM_` 只用于异形侧板、踢脚缺口或非矩形面板。
+- `table` 明确普通桌默认不用 `REVOLVE`、`SWEEP`、`GROUP` 或低层 mesh。
+- `door` / `window` 明确默认输出为普通对象可视化构件，不伪造 Archicad 原生门窗宿主能力。
+- `profile_object` 明确 `REVOLVE` / `SWEEP` 需要清晰几何理由，简单圆柱优先 `CYLIND`。
+- `tests/test_knowledge_lint.py` 增加 archetype 防回退断言。
+
+P0-P6 已完成。后续如果继续扩展知识库，应按同一批次规则新增官方语法、推荐用法、风险边界和防回退测试。
