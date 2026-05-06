@@ -3,12 +3,12 @@ type: concept
 status: stable
 tags: [transform, stack, add, del, mul, rot, coordinate-system]
 aliases: [transformation stack, transform stack, gdl transform, coordinate stack]
-source: raw/ccgdl_dev_doc/docs/GDL_01_Basics.md
+source: official:gdl.graphisoft.com/reference-guide/coordinate-transformations
 ---
 
 # Transformation_Stack
 
-The transformation stack is GDL's mechanism for positioning, rotating, and scaling geometry. It acts like a push-down stack of 4×4 transformation matrices — every `ADD`, `ROT`, `MUL` pushes a new transformation onto the stack, and `DEL` pops them off.
+The transformation stack is GDL's mechanism for positioning, rotating, and scaling geometry. Every `ADD`, `ROT`, or `MUL` pushes a new transformation onto the stack, and `DEL` pops locally defined transformations off it.
 
 ## Why the Stack?
 
@@ -38,7 +38,7 @@ ROTY angle         ! rotate around Y
 ROTZ angle         ! rotate around Z (same as ROT)
 ```
 
-All rotation angles are in degrees, counter-clockwise.
+All rotation angles are in degrees. The axes follow the current local coordinate system.
 
 ### MUL — Scale / Custom Matrix
 
@@ -55,7 +55,7 @@ DEL n              ! pop the top n transformations off the stack
 
 ## Stack Depth Management
 
-The stack depth defaults to 1 (the identity matrix). Each `ADD`, `ROT`, or `MUL` pushes one level. Each `DEL n` pops `n` levels.
+The stack depth defaults to 1 (the identity transformation). Each `ADD`, `ROT`, or `MUL` pushes one level. Each `DEL n` pops `n` levels.
 
 ```gdl
 ! Beginning of 3D script — stack depth = 1
@@ -120,6 +120,13 @@ DEL 2
 ```
 
 Aligning `ADD`/`DEL` pairs vertically by indentation makes the stack depth visually obvious. This is the most important readability pattern in GDL.
+
+## Operational Notes
+
+- Transformations defined in a script stay in effect until deleted.
+- Scripts can only delete the transformations they define locally.
+- `DEL TOP` removes all current transformations in the current script.
+- `NTR()` returns the actual number of transformations.
 
 ## Related
 

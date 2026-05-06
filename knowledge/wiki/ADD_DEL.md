@@ -3,12 +3,12 @@ type: concept
 status: stable
 tags: [stack, push, pop, transformation, add, del, mul]
 aliases: [ADD, DEL, ADDX, ADDY, ADDZ, push pop, stack management]
-source: raw/ccgdl_dev_doc/docs/GDL_01_Basics.md
+source: official:gdl.graphisoft.com/reference-guide/3d-transformations
 ---
 
 # ADD_DEL
 
-`ADD`/`DEL` is the fundamental push/pop pair for managing the [[Transformation_Stack]] in GDL. Together they define the scope of a local coordinate system: `ADD` pushes a new transform, all drawing commands between `ADD` and `DEL` operate in that local space, and `DEL` restores the previous coordinate system.
+`ADD`/`DEL` is the fundamental push/pop pair for managing the [[Transformation_Stack]] in GDL. `ADD` pushes a new transform, commands between `ADD` and `DEL` run in that local space, and `DEL` restores earlier transforms.
 
 ## Why ADD/DEL?
 
@@ -16,17 +16,19 @@ Without ADD/DEL, every piece of geometry would need world-space coordinates. Wit
 
 This is GDL's only composition mechanism (no object references, no scene graph). Mastering it is essential for writing maintainable code.
 
-## Syntax
+## Official Syntax
 
 ```gdl
-ADD x, y, z        ! push translation by (x, y, z)
-ADDX x             ! push X-axis translation only
-ADDY y             ! push Y-axis translation only
-ADDZ z             ! push Z-axis translation only
+ADD dx, dy, dz
+ADDX dx
+ADDY dy
+ADDZ dz
 ```
 
 ```gdl
-DEL n              ! pop n transformations off the stack
+DEL n [, begin_with]
+DEL TOP
+NTR ()
 ```
 
 ## Basic Pattern
@@ -51,7 +53,7 @@ ADD 1, 0, 0
 DEL 1               ! back to depth 1
 ```
 
-Pro tip: use `DEL n` to pop multiple levels at once:
+Pro tip: use `DEL n` to pop multiple levels at once. `DEL TOP` clears all current transformations from the current script:
 
 ```gdl
 ADD 1, 0, 0
@@ -59,11 +61,13 @@ ADD 0, 1, 0
 ROTZ 45
     BLOCK 1, 1, 1
 DEL 3               ! clean up all three transforms at once
+
+DEL TOP             ! clear everything from the current script
 ```
 
 ## Common Traps
 
-### Stack overflow (forgetting DEL)
+### Stack leak (forgetting DEL)
 
 ```gdl
 FOR i = 1 TO 10
@@ -73,7 +77,7 @@ FOR i = 1 TO 10
 NEXT i
 ```
 
-This is the most common GDL bug. The stack has a limited depth (~256 on most ArchiCAD versions). Every iteration leaks one level, and the script crashes before the loop finishes.
+This is the most common GDL bug. Every iteration leaks one level, and the script eventually fails or produces wrong geometry.
 
 ### Double counting in loops
 

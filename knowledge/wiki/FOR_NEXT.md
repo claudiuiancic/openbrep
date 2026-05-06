@@ -3,7 +3,7 @@ type: concept
 status: stable
 tags: [loop, iteration, for, next, control-flow, repetition]
 aliases: [FOR, NEXT, for loop, loop, iteration, gdl for]
-source: raw/ccgdl_dev_doc/docs/GDL_03_Attributes.md
+source: official:gdl.graphisoft.com/reference-guide/flow-control-statements
 ---
 
 # FOR_NEXT
@@ -14,20 +14,20 @@ source: raw/ccgdl_dev_doc/docs/GDL_03_Attributes.md
 
 Repetitive geometry — stair steps, balusters, louver slats, arrayed columns — is impractical to write vertex-by-vertex. `FOR`/`NEXT` lets you generate any number of repeated elements from a compact description.
 
-## Syntax
+## Official Syntax
 
 ```gdl
-FOR var = start TO end [STEP increment]
+FOR variable_name = initial_value TO end_value [ STEP step_value ]
     ! repeated code block
-NEXT var
+NEXT variable_name
 ```
 
 | Part      | Description                                    |
 |-----------|------------------------------------------------|
-| `var`     | Counter variable name (any valid GDL name)     |
-| `start`   | Starting value (numeric expression)            |
-| `end`     | Ending value (numeric expression)              |
-| `STEP`    | Optional step; defaults to +1 (or -1 if end < start) |
+| `variable_name` | Counter variable name (any valid GDL name) |
+| `initial_value` | Starting value (numeric expression)        |
+| `end_value`     | Ending value (numeric expression)          |
+| `step_value`    | Optional step; defaults to +1              |
 
 ## Examples
 
@@ -122,11 +122,15 @@ NEXT leg
 
 ## Edge Cases & Traps
 
-- **STEP defaults**: if `start > end` and no STEP is given, the loop auto-detects and steps by -1. But STEP direction must match: if `start < end` and `STEP -1`, the loop body never executes.
+- **STEP defaults**: if `STEP` is omitted, the increment is `1`. To count down, write `STEP -1`.
 - **Empty loop**: if `start = end`, the loop executes once.
 - **Modifying the counter**: avoid modifying the loop variable inside the body — behavior is undefined.
 - **Performance**: loops in the 3D script run on every view refresh. For high counts (>100), consider if the geometry can be simplified.
-- **NEXT variable**: the variable after `NEXT` is optional in some GDL versions, but always writing it (e.g., `NEXT i`) catches mismatches.
+- **NEXT variable**: always write it. The official syntax includes `NEXT variable_name`.
+- **One NEXT only**: only one `NEXT` is allowed for each `FOR`.
+- **Global variable**: a global variable is not allowed as a loop control variable.
+- **Zero step**: `STEP 0` causes an infinite loop.
+- **Jumping into loop**: you cannot enter a loop by skipping the `FOR` statement.
 
 ## Related
 

@@ -60,7 +60,7 @@ python scripts/verify_gdl_knowledge_sources.py \
 |---|---|---|---|
 | P0 已完成 | 最高风险生成命令 | `BLOCK`、`PROJECT2`、`HOTSPOT2`、`MATERIAL`、`REVOLVE`、`SWEEP` | 修掉伪语法和误导性简写 |
 | P1 已完成 | 核心 3D 几何 | `PRISM_`、`CYLIND`、`CUTPLANE`、`BODY_EDGE_PGON` | 确认参数顺序、状态码、退化几何、布尔/裁切边界 |
-| P2 | 变换与控制流 | `ADD_DEL`、`Transformation_Stack`、`FOR_NEXT`、`IF_ENDIF` | 防止 ADD/DEL、FOR/NEXT、IF/ENDIF 结构性错误 |
+| P2 已完成 | 变换与控制流 | `ADD_DEL`、`Transformation_Stack`、`FOR_NEXT`、`IF_ENDIF` | 防止 ADD/DEL、FOR/NEXT、IF/ENDIF 结构性错误 |
 | P3 | 2D 表达 | `2D_Primitives`、`PROJECT2`、`HOTSPOT2` | 校对平面符号、热点编辑、投影策略 |
 | P4 | 参数与属性 | `Paramlist_XML`、`DEFINE`、`MATERIAL`、`GLOBALS`、`Object_Types` | 校对参数类型、材质/属性、对象类型、全局变量 |
 | P5 | Group / 高级几何 | `GROUP`、`SWEEP`、`REVOLVE`、`BODY_EDGE_PGON` | 确认高级命令只在有把握时用于生成 |
@@ -96,9 +96,9 @@ knowledge/wiki/BODY_EDGE_PGON.md
 
 Python 访问 Graphisoft index 时本地出现 SSL EOF，在线官方文档通过浏览器侧确认；自动验收以本地 lint、上下文 smoke、目标测试和全量测试为准。
 
-## P2 立即执行清单
+## P2 完成记录
 
-优先校对：
+已校对：
 
 ```text
 knowledge/wiki/ADD_DEL.md
@@ -107,11 +107,13 @@ knowledge/wiki/FOR_NEXT.md
 knowledge/wiki/IF_ENDIF.md
 ```
 
-重点查：
+完成结果：
 
-- `ADD` / `ROT` / `MUL` / `DEL` 的栈平衡和嵌套写法。
-- `DEL n` 的数量是否与累计变换严格匹配。
-- `FOR ... NEXT` 的变量、步长、边界和缩进策略。
-- `IF ... THEN` / `ENDIF` 是否避免伪 Python 风格和缺失闭合。
+- `ADD_DEL` 改成官方 `ADD dx, dy, dz` / `DEL n [, begin_with]` / `DEL TOP` / `NTR()`
+- `Transformation_Stack` 补充局部删除、`DEL TOP`、`NTR()` 与变换栈语义。
+- `FOR_NEXT` 改成官方 `FOR variable_name = initial_value TO end_value [ STEP step_value ] NEXT variable_name`
+- `FOR_NEXT` 修正 `STEP` 默认值和 loop control 限制。
+- `IF_ENDIF` 修正为官方允许的比较与逻辑表达式写法。
+- `tests/test_knowledge_lint.py` 增加 P2 语法防回退断言。
 
 P2 完成后再进入 P3，不并行铺开。

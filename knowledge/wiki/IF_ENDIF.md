@@ -3,20 +3,20 @@ type: concept
 status: stable
 tags: [control-flow, conditional, branch, if, endif, elsif, else]
 aliases: [IF, ENDIF, ELSIF, ELSE, conditional, branch, gdl if]
-source: raw/ccgdl_dev_doc/docs/GDL_03_Attributes.md
+source: official:gdl.graphisoft.com/reference-guide/flow-control-statements
 ---
 
 # IF_ENDIF
 
-`IF`/`ENDIF` is GDL's conditional branching construct. It evaluates a numeric expression and executes the corresponding block when the result is non-zero (true).
+`IF`/`ENDIF` is GDL's conditional branching construct. It evaluates a condition and executes the corresponding block when the result is true.
 
 ## Why Conditionals?
 
 Parametric objects need to adapt. A window might have 2 or 3 panels depending on a parameter. A chair might or might not have armrests. `IF`/`ENDIF` lets a single GDL object produce multiple variants from one set of parameters.
 
-Unlike general-purpose languages, GDL conditionals evaluate to **numeric true/false** (0 = false, anything else = true). There is no boolean type — every expression resolves to a number.
+GDL conditions are expression-based. Comparison and logical operators are valid in conditions, and the generated branch is chosen from the expression result.
 
-## Syntax
+## Official Syntax
 
 ```gdl
 IF expression THEN
@@ -74,8 +74,8 @@ ENDIF
 ### Numeric comparison idiom
 
 ```gdl
-! GDL has no < or > operators — use subtraction
-IF A - B THEN       ! equivalent to "A > B" (when A - B > 0)
+! Comparison operators are valid in GDL conditions
+IF A > B THEN
     BLOCK 1, 1, 1
 ENDIF
 ```
@@ -83,17 +83,18 @@ ENDIF
 ### Combined conditions
 
 ```gdl
-! Combining with arithmetic (no logical AND/OR)
-IF hasArms + hasBack THEN       ! 0 = neither, 1 = one, 2 = both
-    ! at least one of them is true
+! Logical operators are valid in GDL conditions
+IF hasArms AND hasBack THEN
+    ! both conditions are true
 ENDIF
 ```
 
 ## Edge Cases & Traps
 
-- **No boolean type**: GDL treats 0 as false, any non-zero as true. `IF A = B THEN` works because `= ` returns 0 or 1.
-- **No `<` or `>` operators**: use subtraction: `IF A - B THEN` (true when A > B). Or use `IF A = B THEN` for equality.
-- **ELSIF vs ELSEIF**: the keyword is `ELSIF` (one word, no 'E'), not `ELSEIF`.
+- **True/false behavior**: conditions still behave like numeric truth values in practice; zero is false and non-zero is true.
+- **Comparison operators**: use the normal comparison operators in the condition.
+- **Logical operators**: use `AND`, `OR`, and `EXOR` when combining conditions.
+- **ELSIF vs ELSEIF**: the keyword is `ELSIF` (one word), not `ELSEIF`.
 - **ENDIF, not END IF**: it's a single keyword.
 - **THEN is required** on the `IF` line.
 - **Performance**: conditionals in the 3D script are evaluated every time the view refreshes. Keep heavy computation in the Master script or Parameter script.
