@@ -16,7 +16,7 @@ import re
 import shutil
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any
+from typing import Any, Callable
 
 
 MEMORY_DIR = ".openbrep/memory"
@@ -354,6 +354,7 @@ class ErrorLearningStore:
         project_name: str = "",
         limit: int = 12,
         scan_chat: bool = True,
+        llm_refiner: Callable[[str], str] | None = None,
     ) -> LearningSummary:
         scanned_count = self.learn_from_chat_transcript(project_name=project_name) if scan_chat else 0
         lessons = self.list_error_lessons(include_seed=True)
@@ -366,17 +367,33 @@ class ErrorLearningStore:
                 message="暂无可整理的错题记录",
             )
 
+        used_llm = False
+        if llm_refiner is not None:
+            prompt = build_learning_skill_refinement_prompt(
+                skill,
+                lessons=_select_relevant_lessons(lessons, project_name=project_name)[:limit],
+                project_name=project_name,
+            )
+            try:
+                refined = _normalize_refined_learning_skill(llm_refiner(prompt))
+            except Exception:
+                refined = ""
+            if refined:
+                skill = refined
+                used_llm = True
+
         self.skills_root.mkdir(parents=True, exist_ok=True)
         self.learned_skill_path.write_text(skill + "\n", encoding="utf-8")
         selected_count = min(
             len(_select_relevant_lessons(lessons, project_name=project_name)),
             limit,
         )
+        mode = "LLM 二阶段整理" if used_llm else "规则整理"
         return LearningSummary(
             ok=True,
             lesson_count=selected_count,
             path=self.learned_skill_path,
-            message=f"已整理 {selected_count} 条错题约束，扫描聊天命中 {scanned_count} 条",
+            message=f"已整理 {selected_count} 条错题约束，扫描聊天命中 {scanned_count} 条，方式：{mode}",
         )
 
     def _write_lessons(self, lessons: list[ErrorLesson]) -> None:
@@ -472,6 +489,61 @@ def build_compacted_learning_skill(
                 lines.append(f"   - Error pattern: `{excerpt}`")
 
     return "\n".join(lines)
+
+
+def build_learning_skill_refinement_prompt(
+    deterministic_skill: str,
+    *,
+    lessons: list[ErrorLesson],
+    project_name: str = "",
+) -> str:
+    lesson_facts: list[str] = []
+    for idx, lesson in enumerate(lessons, 1):
+        lesson_facts.append(
+            "\n".join([
+                f"{idx}. category: {lesson.category}",
+                f"   count: {lesson.count}",
+                f"   summary: {_sanitize_learning_text(lesson.summary)}",
+                f"   guidance: {_sanitize_learning_text(lesson.guidance)}",
+                f"   source: {_sanitize_learning_text(lesson.source)}",
+                f"   excerpt: {_sanitize_learning_text(lesson.raw_excerpt)[:260]}",
+            ])
+        )
+
+    return "\n".join([
+        "你是 OpenBrep 的 GDL 错题本整理器。",
+        "任务：把确定性规则提取出的错题约束改写成更专业、可执行的 GDL 生成自检 Skill。",
+        "",
+        "硬性要求：",
+        "- 只能使用下面提供的事实，不要编造新的错误、命令、项目背景或用户偏好。",
+        "- 保留 Markdown Skill 形式，第一行必须是 `# Skill: learned_gdl_error_avoidance_compacted`。",
+        "- 输出应包含 Success Criteria、Hard Constraints、Representative Lessons。",
+        "- 约束要写成生成/修改 GDL 前可执行的检查项。",
+        "- 不要输出解释、寒暄或代码围栏，只输出最终 Skill Markdown。",
+        "",
+        f"Project: {project_name or 'workspace'}",
+        "",
+        "事实来源：",
+        "\n\n".join(lesson_facts) if lesson_facts else "无",
+        "",
+        "当前确定性整理结果：",
+        deterministic_skill,
+    ])
+
+
+def _normalize_refined_learning_skill(text: str | None) -> str:
+    raw = (text or "").strip()
+    if not raw:
+        return ""
+    raw = re.sub(r"^```(?:markdown|md)?\s*", "", raw, flags=re.IGNORECASE).strip()
+    raw = re.sub(r"\s*```$", "", raw).strip()
+    first_line = next((line.strip() for line in raw.splitlines() if line.strip()), "")
+    if first_line != "# Skill: learned_gdl_error_avoidance_compacted":
+        return ""
+    required = ("Success Criteria", "Hard Constraints", "Representative Lessons")
+    if not all(part in raw for part in required):
+        return ""
+    return raw
 
 
 def _select_relevant_lessons(

@@ -226,6 +226,72 @@ class TestChatFlowDispatch(unittest.TestCase):
             transcript = ErrorLearningStore(tmpdir).list_chat_transcript()
             self.assertEqual([entry.role for entry in transcript[-2:]], ["user", "assistant"])
 
+    def test_process_chat_turn_passes_learning_refiner_to_summary_request(self):
+        st = _DummyStreamlit()
+        with tempfile.TemporaryDirectory() as tmpdir:
+            store = ErrorLearningStore(tmpdir)
+            store.record_error(
+                "Error in 3D script, line 12: Undefined variable width",
+                source="compile",
+                project_name="Chair",
+            )
+            session_state = _State(
+                chat_history=[],
+                project=type("Project", (), {"name": "Chair"})(),
+                pending_gsm_name="",
+                agent_running=False,
+                work_dir=tmpdir,
+            )
+            calls = {"refine": 0, "normal": 0}
+
+            def refine(_prompt: str) -> str:
+                calls["refine"] += 1
+                return """\
+# Skill: learned_gdl_error_avoidance_compacted
+
+## Success Criteria
+
+- 生成前做变量来源检查。
+
+## Hard Constraints
+
+- 变量必须来自参数表或脚本内赋值。
+
+## Representative Lessons
+
+1. width 未定义导致脚本失败。
+"""
+
+            process_chat_turn(
+                st=st,
+                session_state=session_state,
+                chat_payload={
+                    "user_input": "请更新整理错题本",
+                    "live_output": object(),
+                    "vision_b64": None,
+                    "vision_mime": None,
+                    "vision_name": None,
+                },
+                api_key="k",
+                model_name="glm-4-flash",
+                resolve_bridge_input_fn=lambda *_args, **_kwargs: None,
+                resolve_effective_input_fn=lambda *args, **kwargs: ("请更新整理错题本", False, False),
+                detect_gsm_name_candidate_fn=lambda _text: None,
+                handle_tapir_test_trigger_fn=lambda *_args: (False, False),
+                handle_tapir_selection_trigger_fn=lambda *_args: (False, False),
+                handle_tapir_highlight_trigger_fn=lambda *_args: (False, False),
+                handle_tapir_load_params_trigger_fn=lambda *_args: (False, False),
+                handle_tapir_apply_params_trigger_fn=lambda *_args: (False, False),
+                run_vision_path_fn=lambda *args, **kwargs: (False, False, None),
+                run_normal_text_path_fn=lambda *args, **kwargs: calls.__setitem__("normal", calls["normal"] + 1) or (True, True, None),
+                learning_refine_fn=refine,
+            )
+
+            self.assertEqual(calls, {"refine": 1, "normal": 0})
+            self.assertIn("方式：LLM 二阶段整理", session_state.chat_history[-1]["content"])
+            compacted = store.learned_skill_path.read_text(encoding="utf-8")
+            self.assertIn("变量必须来自参数表或脚本内赋值", compacted)
+
     def test_process_chat_turn_routes_image_input(self):
         st = _DummyStreamlit()
         session_state = _State(

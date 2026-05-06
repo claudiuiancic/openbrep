@@ -128,6 +128,63 @@ class TestErrorLearning(unittest.TestCase):
             self.assertEqual(len(lessons), 1)
             self.assertEqual(lessons[0].category, "command_arguments")
 
+    def test_summarize_to_skill_can_use_llm_refiner_with_verified_facts(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            store = ErrorLearningStore(tmpdir)
+            store.record_error(
+                "Error in 3D script, line 12: Undefined variable width",
+                source="compile",
+                project_name="Chair",
+            )
+            captured = {}
+
+            def refine(prompt: str) -> str:
+                captured["prompt"] = prompt
+                return """\
+# Skill: learned_gdl_error_avoidance_compacted
+
+## Success Criteria
+
+- 生成前检查变量来源。
+
+## Hard Constraints
+
+- 变量必须来自参数表或脚本内赋值。
+
+## Representative Lessons
+
+1. width 未定义导致 3D 脚本失败。
+"""
+
+            result = store.summarize_to_skill(project_name="Chair", llm_refiner=refine)
+
+            self.assertTrue(result.ok)
+            self.assertIn("方式：LLM 二阶段整理", result.message)
+            self.assertIn("只能使用下面提供的事实", captured["prompt"])
+            self.assertIn("Undefined variable width", captured["prompt"])
+            compacted = store.learned_skill_path.read_text(encoding="utf-8")
+            self.assertIn("变量必须来自参数表或脚本内赋值", compacted)
+
+    def test_summarize_to_skill_falls_back_when_llm_refiner_output_is_invalid(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            store = ErrorLearningStore(tmpdir)
+            store.record_error(
+                "Error in 3D script, line 12: Undefined variable width",
+                source="compile",
+                project_name="Chair",
+            )
+
+            result = store.summarize_to_skill(
+                project_name="Chair",
+                llm_refiner=lambda _prompt: "随便聊几句，不是 Skill",
+            )
+
+            self.assertTrue(result.ok)
+            self.assertIn("方式：规则整理", result.message)
+            compacted = store.learned_skill_path.read_text(encoding="utf-8")
+            self.assertIn("# Skill: learned_gdl_error_avoidance_compacted", compacted)
+            self.assertIn("variable_mapping", compacted)
+
     def test_memory_status_export_and_clear_cover_workspace_memory(self):
         with tempfile.TemporaryDirectory() as tmpdir:
             store = ErrorLearningStore(tmpdir)

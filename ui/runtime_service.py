@@ -34,6 +34,39 @@ def build_llm(
     return LLMAdapter(config)
 
 
+def refine_learning_skill_with_llm(
+    *,
+    prompt: str,
+    model_name: str,
+    api_key: str,
+    api_base: str,
+    assistant_settings: str,
+    custom_providers: list[dict],
+) -> str:
+    llm = build_llm(
+        model_name=model_name,
+        api_key=api_key,
+        api_base=api_base,
+        assistant_settings=assistant_settings,
+        custom_providers=custom_providers,
+    )
+    response = llm.generate(
+        [
+            {
+                "role": "system",
+                "content": (
+                    "You refine verified OpenBrep GDL error-learning notes into "
+                    "auditable Markdown Skills. Do not invent facts."
+                ),
+            },
+            {"role": "user", "content": prompt},
+        ],
+        temperature=0.1,
+        max_tokens=3000,
+    )
+    return response.content
+
+
 def load_skills(*, project_root: Path, work_dir: str) -> SkillsLoader:
     project_skills_dir = project_root / "skills"
     skills_loader = SkillsLoader(str(project_skills_dir))

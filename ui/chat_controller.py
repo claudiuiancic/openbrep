@@ -272,18 +272,22 @@ def is_learning_summary_request(text: str | None) -> bool:
     return has_learning_target and has_action
 
 
-def summarize_learning_from_chat_request(session_state, text: str) -> str:
+def summarize_learning_from_chat_request(session_state, text: str, llm_refiner=None) -> str:
     project = session_state.get("project")
     project_name = getattr(project, "name", "") if project is not None else ""
     work_dir = session_state.get("work_dir", "./workdir")
-    result = ErrorLearningStore(work_dir).summarize_to_skill(project_name=project_name)
+    result = ErrorLearningStore(work_dir).summarize_to_skill(
+        project_name=project_name,
+        llm_refiner=llm_refiner,
+    )
     if result.ok:
         session_state["learning_notice"] = result.message
         return (
             f"{result.message}\n\n"
             f"已写入：`{result.path}`\n\n"
-            "说明：当前整理链路先用确定性规则扫描聊天记录和已有编译/报错记录，"
-            "再压缩成后续生成会自动注入的本地 Skill；不是再调用一次 LLM 摘要。"
+            "说明：整理链路先用确定性规则扫描聊天记录和已有编译/报错记录，"
+            "再把可验证事实压缩成后续生成会自动注入的本地 Skill；"
+            "如果可用，会额外调用 LLM 做二阶段专业化改写，失败则回退到规则整理。"
         )
     session_state["learning_notice"] = result.message
     return (
@@ -523,6 +527,7 @@ def process_chat_turn(
     handle_tapir_apply_params_trigger_fn: Callable[[bool], tuple[bool, bool]],
     run_vision_path_fn: Callable[..., tuple[bool, bool, str | None]],
     run_normal_text_path_fn: Callable[..., tuple[bool, bool, str | None]],
+    learning_refine_fn: Callable[[str], str] | None = None,
 ) -> None:
     runtime = pop_chat_runtime_state(session_state=session_state, has_image_input=bool(chat_payload.get("vision_b64")))
     user_input = chat_payload.get("user_input")
@@ -596,7 +601,11 @@ def process_chat_turn(
         if is_learning_summary_request(effective_input):
             session_state.chat_history.append({"role": "user", "content": effective_input})
             try:
-                msg = summarize_learning_from_chat_request(session_state, effective_input)
+                msg = summarize_learning_from_chat_request(
+                    session_state,
+                    effective_input,
+                    llm_refiner=learning_refine_fn,
+                )
             except Exception as exc:
                 msg = f"整理错题本失败：{exc}"
                 session_state["learning_notice"] = msg

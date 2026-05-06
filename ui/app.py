@@ -526,6 +526,17 @@ def get_llm():
     )
 
 
+def _refine_learning_skill_with_llm(prompt: str) -> str:
+    return ui_runtime_service.refine_learning_skill_with_llm(
+        prompt=prompt,
+        model_name=model_name,
+        api_key=api_key,
+        api_base=api_base,
+        assistant_settings=st.session_state.get("assistant_settings", ""),
+        custom_providers=_custom_providers,
+    )
+
+
 def _load_generation_config() -> GDLAgentConfig:
     return ui_config_service.build_generation_config(
         Path(__file__).parent.parent,
@@ -1513,6 +1524,7 @@ with col_right:
         handle_tapir_apply_params_trigger_fn=_handle_tapir_apply_params_trigger,
         run_vision_path_fn=_run_vision_path,
         run_normal_text_path_fn=_run_normal_text_path,
+        learning_refine_fn=_refine_learning_skill_with_llm,
     )
 
     # ── Footer ────────────────────────────────────────────────
