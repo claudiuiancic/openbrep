@@ -1,146 +1,80 @@
 ---
 type: concept
 status: stable
-tags: [globals, request, context, project-info, parameters]
-aliases: [GLOBALS, globals, request, global variables, SYMBOL, WALL, COLUMN, OBJECT]
-source: raw/ccgdl_dev_doc/docs/GDL_05_Globals_Request.md
+tags: [globals, context, project-info, view, scale, environment]
+aliases: [GLOBALS, global variables, GLOB_SCALE, GLOB_VIEW_TYPE, SYMB_POS_X, WALL_THICKNESS]
+source: official:gdl.graphisoft.com/reference-guide/global-variables
 ---
 
 # GLOBALS
 
-`GLOBALS` declares which **project context variables** a GDL object needs access to. These variables tell the object about its surroundings — what type of building element it's attached to, the current floor plan scale, and other project-level information.
+GDL global variables are built-in variables supplied by Archicad. They expose view, project, placement, host element, and environment context to a library part.
 
-## Syntax
+Modern GDL does not require a `GLOBALS list_of_variables` declaration before reading global variables. Use the official global variable names directly.
 
-```gdl
-GLOBALS list_of_variables
-```
-
-A GLOBALS statement is typically placed in the **master script** and lists the context variables the object uses across all scripts.
-
-## Common GLOBALS Variables
-
-### Element Type
+## Common Useful Globals
 
 ```gdl
-GLOBALS SYMBOL
+GLOB_SCALE
+GLOB_VIEW_TYPE
+GLOB_PREVIEW_MODE
+GLOB_FEEDBACK_MODE
+GLOB_SEO_TOOL_MODE
+SYMB_POS_X
+SYMB_POS_Y
+SYMB_ROTANGLE
+WALL_THICKNESS
+WALL_HEIGHT
 ```
-`SYMBOL` returns an integer identifying the type of element this object is placed in:
 
-| Value | Element Type    |
-|-------|-----------------|
-| 1     | WALL            |
-| 2     | COLUMN          |
-| 3     | BEAM            |
-| 4     | SLAB            |
-| 5     | ROOF            |
-| 6     | SHELL           |
-| 7     | MESH            |
-| 8     | OBJECT          |
-| 9     | LIGHT           |
-| 10    | REGION          |
-| 15    | SKYLIGHT        |
-| 20    | DOOR            |
-| 21    | WINDOW          |
-| 22    | OPENING         |
-| 31    | STAIR           |
-| 32    | RAILING         |
-| 51    | ZONE            |
-| 61    | CURTAIN_WALL    |
-| 63    | PANEL           |
-| 64    | JUNCTION        |
+## Recommended OpenBrep Use
 
-### Story / Floor
-
-```gdl
-GLOBALS STORY, STORYLEVEL
-```
-- `STORY` — story number (0 = ground floor, negative = basement)
-- `STORYLEVEL` — absolute Z-coordinate of the story
-
-### Cut Plane / Display
-
-```gdl
-GLOBALS CUTPLANE, CUTHEIGHT
-```
-- `CUTPLANE` — Z-coordinate of the floor plan cut plane
-- `CUTHEIGHT` — height above cut plane still shown
-
-### Scale
-
-```gdl
-GLOBALS SCALE
-```
-- `SCALE` — inverse of the drawing scale (e.g., `100` = 1:100)
-
-### Other Common Variables
-
-| Variable       | Returns                         |
-|----------------|---------------------------------|
-| `REVISION`     | Current revision number         |
-| `REVERSION`    | GDL revision (internal version) |
-| `DISTANCE`     | Wall thickness (when in wall)   |
-| `WALLH`        | Wall height                     |
-| `WALLTHICKNESS`| Wall thickness alias            |
+- Use `GLOB_SCALE` in 2D script when symbol detail should change with drawing scale.
+- Use `GLOB_VIEW_TYPE`, `GLOB_PREVIEW_MODE`, `GLOB_FEEDBACK_MODE`, and `GLOB_SEO_TOOL_MODE` for display context decisions.
+- Use wall globals only in door/window/wall-end contexts where the host wall exists.
+- Avoid view-dependent globals in parameter scripts and master scripts that run as parameter scripts.
+- Prefer explicit parameters for object dimensions; globals should adapt display or host-specific behavior, not replace normal parameters.
 
 ## Examples
 
-### Object that adapts to element type
+### Scale-sensitive 2D display
 
 ```gdl
-! Master script
-GLOBALS SYMBOL
+IF GLOB_SCALE <= 50 THEN
+    LINE2 0, B * 0.9, A, B * 0.9
+ENDIF
+```
 
-IF SYMBOL = 2 OR SYMBOL = 1 THEN
-  PARAMETERS A = 0.5, B = 0.5
+### Feedback-mode simplification
+
+```gdl
+IF GLOB_FEEDBACK_MODE THEN
+    RESOL 12
 ELSE
-  PARAMETERS A = 0.3, B = 0.3
+    RESOL gs_resol
 ENDIF
 ```
 
-### Wall-dependent parameter
+### Wall thickness fallback
 
 ```gdl
-GLOBALS WALLTHICKNESS
-
-IF WALLTHICKNESS > 0 THEN
-  PARAMETERS depth = WALLTHICKNESS
+IF WALL_THICKNESS > 0 THEN
+    _depth = WALL_THICKNESS
 ELSE
-  PARAMETERS depth = 0.3
+    _depth = B
 ENDIF
 ```
-
-### Multiple global context variables
-
-```gdl
-GLOBALS SYMBOL, STORYLEVEL, SCALE, CUTPLANE
-
-! Conditional display based on story
-IF STORYLEVEL > 50 THEN
-  ! Only on upper floors
-  BLOCK 0, 0, 0, 1, 1, 1
-ENDIF
-```
-
-## GLOBALS in Different Scripts
-
-| Script     | Typical GLOBALS                                |
-|------------|------------------------------------------------|
-| Master     | `SYMBOL`, `STORYLEVEL`, parameters conditional |
-| 1D/Plan    | `SCALE`, `CUTPLANE`                            |
-| 2D/Projection | `CUTPLANE`, `SCALE`                        |
-| 3D         | None (rarely needed)                           |
-| Properties | None                                           |
 
 ## Edge Cases & Traps
 
-- **Unused GLOBALS**: declaring a GLOBALS variable that is never referenced has no performance cost but clutters the script — only request what you use.
-- **Undeclared access**: reading `SYMBOL` without `GLOBALS SYMBOL` returns 0 or undefined — the value is **not** automatically available.
-- **Variable not supported**: requesting a GLOBALS variable that doesn't exist in your ArchiCAD version returns `0` silently — no error or warning.
-- **GLOBALS in subroutines**: `GLOBALS` must appear in the **master script** or the calling script's top-level scope, not inside `DEFINE` blocks.
+- Do not invent a `GLOBALS SYMBOL` declaration. This is not the modern way to access context.
+- `GLOB_CONTEXT` is deprecated; prefer `GLOB_VIEW_TYPE` combined with preview, feedback, and SEO mode globals.
+- View-dependent globals can produce warnings or dummy defaults in parameter scripts.
+- Some host-element globals only contain useful values in compatible host contexts.
+- Global variable availability can vary by Archicad version and script type.
 
 ## Related
 
-- [[IF_ENDIF]] — branching on GLOBALS values
-- [[CUTPLANE]] — cut plane configuration
-- [[Paramlist_XML]] — parameters driven by GLOBALS values
+- [[Object_Types]] — choosing object behavior by library part subtype and host context
+- [[IF_ENDIF]] — branching on global values
+- [[Paramlist_XML]] — keeping explicit dimensions parameter-driven

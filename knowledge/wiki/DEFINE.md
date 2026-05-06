@@ -1,111 +1,64 @@
 ---
 type: concept
 status: stable
-tags: [3d, geometry, define, macro, reuse, sub-geometry]
-aliases: [DEFINE, define, sub, gosub, call, reuseable geometry]
-source: raw/ccgdl_dev_doc/docs/GDL_06_Macro_UI_Perf.md
+tags: [attribute, define, material, fill, line-type, style, texture]
+aliases: [DEFINE, DEFINE MATERIAL, DEFINE FILL, DEFINE LINE_TYPE, DEFINE STYLE, inline attribute definition]
+source: official:gdl.graphisoft.com/reference-guide/inline-attribute-definition
 ---
 
 # DEFINE
 
-`DEFINE` ... `END` creates a **reusable sub-program** within a GDL script. Defined sub-programs can be called multiple times with `GOSUB`, reducing code duplication for repeated geometry patterns.
+`DEFINE` is not a GDL subroutine mechanism. In official GDL syntax, `DEFINE` belongs to inline attribute definition: surfaces, fills, line types, styles, textures, and related attributes.
 
-## Syntax
+For reusable script blocks, use labels with `GOSUB` / `RETURN`, not `DEFINE name ... END`.
+
+## Official DEFINE Family
+
+Common commands include:
 
 ```gdl
-DEFINE name [param1, param2, ...]
-  ... geometry or logic ...
-END
+DEFINE MATERIAL name type, surface_red, surface_green, surface_blue
+DEFINE MATERIAL name [,] BASED_ON orig_name [,] PARAMETERS name1 = expr1 [, ...]
+DEFINE FILL name [[,] FILLTYPES_MASK fill_types,] ...
+DEFINE LINE_TYPE name spacing, n, length1, ..., lengthn
+DEFINE STYLE name font_family, size, anchor, face_code
+DEFINE TEXTURE name expression, x, y, mask, angle
 ```
 
-| Param   | Type          | Description                                  |
-|---------|---------------|----------------------------------------------|
-| `name`  | identifier    | Sub-program name (invoked via `GOSUB name`)  |
-| `param` | variable name | Optional parameters passed by reference      |
+## Reusable GDL Code Pattern
 
-## Calling Syntax
+Use labels and `GOSUB`:
 
 ```gdl
-GOSUB name [arg1, arg2, ...]
-```
-
-## How Parameters Work
-
-- Parameters are passed **by reference** — the sub-program can modify variables in the caller's scope.
-- The sub-program sees the **current values** of all global variables and parameters.
-- Arguments map to parameters positionally: first arg → first param, etc.
-- Parameters act as **local aliases**: inside `DEFINE`, `param1` refers to whatever variable/expression was passed as `arg1`.
-
-## Examples
-
-### Reusable column cap
-
-```gdl
-DEFINE column_cap w, h
-  ADD -w/2, -w/2, h
-    PRISM_ 4, 0.15,
-        0, 0, 1,
-        w, 0, 1,
-        w, w, 1,
-        0, w, 1
-  DEL 1
-END
-
-! Usage
-GOSUB column_cap 0.8, 3.0
-ADD 2.5, 0, 0
-  GOSUB column_cap 0.8, 3.0
+GOSUB "draw_leg"
+ADD A - leg_w, 0, 0
+GOSUB "draw_leg"
 DEL 1
-```
-
-### Sub-program with local variables
-
-```gdl
-DEFINE frame a, b, depth
-  ! Creates a rectangular frame with given outer dimensions
-  BLOCK -a/2, -b/2, 0, a, b, depth
-  BLOCK -a/2 + 0.05, -b/2 + 0.05, 0, a - 0.1, b - 0.1, depth
-END
-```
-
-## Scope Rules
-
-| Scope        | Variables access                      |
-|--------------|---------------------------------------|
-| Before CALL  | Normal script scope                   |
-| Inside DEFINE| Parameters + all global variables     |
-| After RETURN | Parameters have caller's final values |
-
-## Static Behavior
-
-`DEFINE` blocks are processed **once at compile time**, not at runtime in the traditional sense. Each `GOSUB` results in the defined code being executed in the current transformation context:
-
-```gdl
-DEFINE knob
-  CYLIND 0, 0, 0.03, 0.03, 0.05
 END
 
-! Written once, used twice in different positions
-ADD 0.5, 0, 0
-  GOSUB knob
-DEL 1
-
-ADD 1.5, 0, 0
-  GOSUB knob
-DEL 1
+"draw_leg":
+    BLOCK leg_w, leg_d, leg_h
+RETURN
 ```
+
+## Recommended OpenBrep Use
+
+- Do not generate `DEFINE name [param] ... END` for reusable geometry.
+- Prefer `GOSUB` labels for small repeated code blocks.
+- Prefer parameters in `paramlist.xml` for user-editable materials instead of defining new project attributes.
+- Use `DEFINE MATERIAL` only when the generated object intentionally needs an inline surface definition.
+- Keep inline attribute definitions before the first use of the defined attribute.
 
 ## Edge Cases & Traps
 
-- **No forward reference**: `DEFINE` must appear before any `GOSUB` that calls it (linear order).
-- **Recursion**: GDL does not support recursive `GOSUB` — the sub-program cannot call itself, directly or indirectly.
-- **Parameter count mismatch**: passing more args than defined params — excess args are evaluated but the return values are lost. Passing fewer args — unmatched params remain at their **current value** (not zero).
-- **Nested calls**: `GOSUB` inside a `DEFINE` is supported. There is no hard limit on nesting depth, but avoid deep chains for readability.
-- **Unused parameters**: defining params that the sub-program never references is legal but misleading.
-- **No local variables**: all variables in GDL are effectively global. Use unique prefixes in DEFINE blocks to avoid name collisions: `_knob_r`, `_knob_h`.
+- `DEFINE` is an attribute keyword, not a function or class declaration.
+- `END` ends script execution or blocks in specific contexts; it is not the closing keyword for a `DEFINE` subroutine.
+- `GOSUB` blocks should end with `RETURN`.
+- Inline attributes can be local to the script context and may not behave like project attributes in every script.
+- Hard-coded inline attributes reduce project portability; material parameters are usually safer for OpenBrep-generated objects.
 
 ## Related
 
-- [[FOR_NEXT]] — looping over repeated geometry (alternative for repeating patterns)
-- [[GROUP]] — logical sub-division within a body (for organization, not reuse)
-- [[Transformation_Stack]] — positioning repeated sub-geometry
+- [[MATERIAL]] — applying a surface to following 3D geometry
+- [[Paramlist_XML]] — defining editable material parameters
+- [[Transformation_Stack]] — positioning repeated geometry blocks

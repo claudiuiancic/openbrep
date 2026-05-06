@@ -1,143 +1,102 @@
 ---
 type: concept
 status: stable
-tags: [parameters, xml, types, configuration, paramlist, ui]
-aliases: [paramlist, parameters xml, PARAMETERS, paramlist.xml, gdl parameters]
-source: raw/ccgdl_dev_doc/docs/GDL_01_Basics.md
+tags: [parameters, xml, types, configuration, paramlist, hsf]
+aliases: [paramlist, parameters xml, paramlist.xml, gdl parameters, HSF parameters]
+source: openbrep:paramlist_builder.py
 ---
 
 # Paramlist_XML
 
-`paramlist.xml` is the parameter definition file for a GDL object. It defines all user-facing parameters — their names, types, default values, ranges, and UI grouping. Unlike GDL scripts which use PARAMETERS statements, the modern GDL format uses `paramlist.xml` for declarative parameter specification.
+`paramlist.xml` is the HSF parameter definition file for a GDL library part. OpenBrep treats it as part of source state together with `scripts/*.gdl`.
 
-## Why Parameters?
+Generated GDL must keep script variable names and `paramlist.xml` parameter names exactly aligned.
 
-Without parameters, every GDL object would be a fixed shape. Parameters make objects **parametric** — a single door object can be 0.8m or 1.2m wide depending on the `A` parameter. The `paramlist.xml` file is the contract between the object and the ArchiCAD UI: it tells ArchiCAD what knobs and sliders to show the user.
+## OpenBrep HSF Format
 
-## File Location
-
-```
-my_object/
-├── paramlist.xml        ← parameter definitions
-├── scripts/
-│   ├── master.gdl       ← master script (parameter defaults, calculations)
-│   ├── 1d.gdl           ← 1D / plan script
-│   ├── 2d.gdl           ← 2D projection script
-│   ├── 3d.gdl           ← 3D geometry script
-│   ├── ui.gdl           ← UI script (custom dialogs)
-│   └── vl.gdl           ← property / listing script
-```
-
-## Structure
+OpenBrep writes the LP_XMLConverter-style HSF format:
 
 ```xml
 <?xml version="1.0" encoding="UTF-8"?>
-<PARAMETERS product="ArchiCAD" version="1">
-    <PARAMETER name="A" type="Length">
-        <VALUE>1.00</VALUE>
-        <FIXEDVALUE>0.0</FIXEDVALUE>
-        <RANGEMIN>0.1</RANGEMIN>
-        <RANGEMAX>3.0</RANGEMAX>
-    </PARAMETER>
-</PARAMETERS>
+<ParamSection>
+    <ParamSectHeader>
+        ...
+    </ParamSectHeader>
+    <Parameters SectVersion="27" SectionFlags="0" SubIdent="0">
+        <Length Name="A">
+            <Description><![CDATA["Width"]]></Description>
+            <Fix/>
+            <Value>1</Value>
+        </Length>
+    </Parameters>
+</ParamSection>
 ```
 
-## Elements
+Do not generate simplified `<PARAMETERS>` / `<PARAMETER>` XML for OpenBrep HSF projects.
 
-| Element            | Description                                |
-|--------------------|--------------------------------------------|
-| `PARAMETERS`       | Root element (`product` and `version` attrs) |
-| `PARAMETER`        | A single parameter (`name` and `type` attrs) |
-| `VALUE`            | Default value                               |
-| `FIXEDVALUE`       | Fixed value override (0.0 = no override)    |
-| `RANGEMIN`         | Minimum allowed value                       |
-| `RANGEMAX`         | Maximum allowed value                       |
-| `ARRAY`            | Array parameter definition (see below)      |
+## Supported Type Tags
 
-## Common Parameter Types
+Use the exact HSF type tags supported by OpenBrep:
 
-| Type             | GDL Equivalent | Description               |
-|------------------|----------------|---------------------------|
-| `Length`         | numeric        | Dimension in meters       |
-| `Angle`          | numeric        | Rotation angle in degrees |
-| `Real`           | numeric        | Real number (unitless)    |
-| `Integer`        | numeric        | Integer value             |
-| `Boolean`        | numeric        | 0 or 1 flag               |
-| `Material`       | material       | ArchiCAD material         |
-| `Pen`            | integer        | Pen number (1-255)        |
-| `Line`           | integer        | Line type index           |
-| `Fill`           | integer        | Fill pattern index        |
-| `String`         | string         | Text value                |
-
-## Array Parameters
-
-```xml
-<PARAMETER name="values" type="Real">
-    <ARRAY length="8" dimension="1"/>
-</PARAMETER>
+```text
+Length
+Angle
+RealNum
+Integer
+Boolean
+String
+PenColor
+FillPattern
+LineType
+Material
+Title
+Separator
 ```
 
-Arrays can be multi-dimensional:
+Common aliases in user-facing text must be normalized before writing XML:
 
-```xml
-<ARRAY length="12" dimension="2" dim1="4" dim2="3"/>
+| User-facing name | HSF type tag |
+|---|---|
+| Real | `RealNum` |
+| Pen | `PenColor` |
+| Fill | `FillPattern` |
+| Line | `LineType` |
+
+## Recommended OpenBrep Use
+
+- Use `Length A`, `Length B`, and `Length ZZYZX` for primary dimensions.
+- Keep `A`, `B`, and `ZZYZX` fixed with `<Fix/>`.
+- Store `Length` values in meters.
+- Store `Angle` values in degrees.
+- Store `Boolean` values as `0` or `1`.
+- Store `Material`, `FillPattern`, and `LineType` as integer attribute indices, not string names.
+- Put user-facing labels in `<Description><![CDATA["..."]]></Description>`.
+
+## LLM Output Format
+
+When an LLM returns a `paramlist.xml` block to OpenBrep, prefer the compact line format that OpenBrep parses:
+
+```text
+Length A = 1.2 ! Width
+Length B = 0.4 ! Depth
+Length ZZYZX = 2.1 ! Height
+Material mat_body = 0 ! Body surface
+Boolean has_back_panel = 1 ! Back panel
 ```
 
-Access in GDL: `values[1]`, `values[2][3]`, etc.
-
-## Examples
-
-### Simple rectangular column
-
-```xml
-<PARAMETERS product="ArchiCAD" version="1">
-    <PARAMETER name="A" type="Length">
-        <VALUE>0.40</VALUE>
-        <RANGEMIN>0.10</RANGEMIN>
-        <RANGEMAX>2.00</RANGEMAX>
-    </PARAMETER>
-    <PARAMETER name="B" type="Length">
-        <VALUE>0.40</VALUE>
-        <RANGEMIN>0.10</RANGEMIN>
-        <RANGEMAX>2.00</RANGEMAX>
-    </PARAMETER>
-    <PARAMETER name="ZZYZX" type="Length">
-        <VALUE>3.00</VALUE>
-        <RANGEMIN>0.50</RANGEMIN>
-        <RANGEMAX>15.00</RANGEMAX>
-    </PARAMETER>
-    <PARAMETER name="hasBase" type="Boolean">
-        <VALUE>1</VALUE>
-    </PARAMETER>
-</PARAMETERS>
-```
-
-### With materials and dropdown
-
-```xml
-<PARAMETERS product="ArchiCAD" version="1">
-    <PARAMETER name="frameMat" type="Material">
-        <VALUE>1</VALUE>
-    </PARAMETER>
-    <PARAMETER name="style" type="Integer">
-        <VALUE>1</VALUE>
-        <RANGEMIN>1</RANGEMIN>
-        <RANGEMAX>3</RANGEMAX>
-    </PARAMETER>
-</PARAMETERS>
-```
+OpenBrep converts that line format into HSF XML.
 
 ## Edge Cases & Traps
 
-- **No VALUE element**: defaults to 0. This may produce invisible geometry if the parameter controls a dimension.
-- **RANGEMIN > RANGEMAX**: ArchiCAD clamps the parameter but the behavior is undefined — always ensure `RANGEMIN ≤ RANGEMAX`.
-- **Empty paramlist.xml**: if the file exists but is empty, ArchiCAD treats the object as non-parametric (no UI parameters).
-- **Type mismatch**: defining a parameter as `String` but trying to use it in a numeric context fails silently (evaluates to 0).
-- **Name collision**: two parameters with the same `name` attribute — ArchiCAD uses only the first definition.
-- **Unused parameters**: defining parameters that no script references is wasteful but harmless. Missing parameters that ARE referenced causes runtime warnings.
+- `Float` and `Text` are not valid OpenBrep HSF type tags; use `RealNum` and `String`.
+- `Material`, `FillPattern`, and `LineType` values must be numeric indices in HSF XML.
+- Duplicate parameter names are invalid for reliable generation.
+- A script reference that is missing from `paramlist.xml` is an undefined variable risk.
+- Do not include units like `mm` in parameter names; convert dimensions to meters in values.
+- Do not generate standalone XML unless the caller explicitly asks for raw HSF XML.
 
 ## Related
 
-- [[PRISM_]] — using A, B, ZZYZX parameters for geometry
-- [[HOTSPOT2]] — linking hotspots to parameters declared in paramlist.xml
+- [[MATERIAL]] — using material parameters
+- [[HOTSPOT2]] — linking graphical editing to parameters
 - [[IF_ENDIF]] — branching on Boolean parameters

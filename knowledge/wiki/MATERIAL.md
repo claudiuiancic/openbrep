@@ -3,7 +3,7 @@ type: reference
 status: stable
 tags: [material, attribute, surface, 3d]
 aliases: [MATERIAL, material command, surface material]
-source: knowledge/GDL_3d_commands.md
+source: official:gdl.graphisoft.com/reference-guide/index
 ---
 
 # MATERIAL
@@ -17,7 +17,7 @@ source: knowledge/GDL_3d_commands.md
 [SET] MATERIAL index
 ```
 
-The `SET` keyword is optional in GDL command syntax. For generated OpenBrep objects, prefer a Material parameter from `paramlist.xml` as the value used after `MATERIAL`, not a hard-coded attribute index. This keeps objects editable across Archicad projects.
+The `SET` keyword is optional in GDL command syntax. For generated OpenBrep objects, prefer a Material parameter from `paramlist.xml` as the value used after `MATERIAL`. In HSF `paramlist.xml`, `Material` values are integer attribute indices.
 
 ## Example
 
@@ -30,7 +30,8 @@ BLOCK A, B, ZZYZX
 
 - Use separate material parameters for visually distinct parts, such as body, frame, shelf, glass, or front panel.
 - Set `MATERIAL` immediately before the geometry it affects.
-- Avoid hard-coded numeric materials unless the object is intentionally tied to a specific Archicad attribute set.
+- Avoid hard-coded numeric material literals in scripts unless the object is intentionally tied to a specific Archicad attribute set.
+- Keep material parameter values numeric in HSF XML; string surface names are not valid `Material` values there.
 
 ## Edge Cases & Traps
 

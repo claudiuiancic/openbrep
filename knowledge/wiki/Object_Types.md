@@ -1,103 +1,63 @@
 ---
 type: reference
 status: stable
-tags: [object-type, wall, column, beam, slab, door, window, element, symbol]
-aliases: [Object_Types, SYMBOL, WALL, COLUMN, DOOR, WINDOW, object types, building elements, element types]
-source: raw/ccgdl_dev_doc/docs/GDL_05_Globals_Request.md
+tags: [object-type, subtype, wall, door, window, object, host, library-part]
+aliases: [Object_Types, object subtype, library part type, door, window, object, wall-hosted]
+source: official:gdl.graphisoft.com/reference-guide/global-variables
 ---
 
 # Object_Types
 
-Every GDL object inserted into an ArchiCAD project has a **type** determined by the element it's placed in. The type is accessed via the `SYMBOL` global variable and controls default behavior for cut planes, insertion logic, and parameter inheritance.
+In OpenBrep, object type should normally mean the library part's intended subtype and host behavior, not a generated `SYMBOL` integer table.
 
-## Element Type Table
+The most important distinction for generated GDL objects is whether the object is a generic placed object, a wall-hosted door/window, or another specialized library part.
 
-| `SYMBOL` | Element       | Typical Usage                        |
-|----------|---------------|--------------------------------------|
-| 1        | WALL          | Wall-hosted objects                  |
-| 2        | COLUMN        | Free-standing or wall-attached       |
-| 3        | BEAM          | Structural beams                     |
-| 4        | SLAB          | Floor/roof slabs                     |
-| 5        | ROOF          | Roof planes                          |
-| 6        | SHELL         | Free-form shells                     |
-| 7        | MESH          | Terrain meshes                       |
-| 8        | OBJECT        | Generic library part (default)       |
-| 9        | LIGHT         | Light fixtures                       |
-| 10       | REGION        | 2D regions                           |
-| 15       | SKYLIGHT      | Skylights                            |
-| 20       | DOOR          | Door objects (auto-embedded in wall) |
-| 21       | WINDOW        | Window objects (auto-embedded)       |
-| 22       | OPENING       | Wall openings                        |
-| 31       | STAIR         | Stair objects                        |
-| 32       | RAILING       | Railing objects                      |
-| 51       | ZONE          | Zone/room objects                    |
-| 61       | CURTAIN_WALL  | Curtain wall systems                 |
-| 63       | PANEL         | Curtain wall panels                  |
-| 64       | JUNCTION      | Curtain wall junctions               |
+## Recommended OpenBrep Types
 
-## Example: Type-Adaptive Object
+| Type | Typical Use | Notes |
+|---|---|---|
+| Generic object | Furniture, casework, fixtures, equipment | Best default for OpenBrep-created parametric objects |
+| Door | Wall-hosted door | Requires door/window subtype metadata and wall opening behavior |
+| Window | Wall-hosted window | Requires door/window subtype metadata and wall opening behavior |
+| Label / marker | Annotation | Different script and context expectations |
+| Curtain wall part | Panel, frame, junction | Specialized host context; do not generate by default |
+
+## Recommended OpenBrep Use
+
+- Use generic object behavior unless the user explicitly asks for a door, window, label, marker, or host-specific object.
+- Do not try to change object type from GDL script at runtime.
+- Do not infer object type from a fake `GLOBALS SYMBOL` declaration.
+- For furniture and cabinet generation, rely on explicit parameters `A`, `B`, `ZZYZX`, material parameters, and manual 2D/HOTSPOT2 behavior.
+- For door/window generation, plan for host-wall assumptions, opening behavior, sill/head parameters, and wall thickness globals.
+
+## Example: Generic Object Fallback
 
 ```gdl
-! Master script
-GLOBALS SYMBOL
-
-IF SYMBOL = 1 THEN
-  ! In a wall → set depth to wall thickness
-  GLOBALS WALLTHICKNESS
-  PARAMETERS depth = WALLTHICKNESS
-ELSE
-  ! Free-standing → use user-specified depth
-  PARAMETERS depth = 0.3
-ENDIF
+! Generic furniture/object behavior.
+! Dimensions are explicit parameters, not inferred from host type.
+BLOCK A, B, ZZYZX
 ```
 
-## Type-Specific Behavior
-
-### Wall-hosted (SYMBOL=1, 20, 21, 22)
-- The object inherits wall cut plane behavior.
-- Wall-hosted objects (doors, windows) automatically create openings.
-- `WALLTHICKNESS` and `WALLH` globals are available.
-
-### Column (SYMBOL=2)
-- Columns can be free-standing or embedded in walls.
-- Floor plan display includes the column's own cut fill (diagonal cross-hatch by default).
-- The cut plane always passes through a column's insertion point.
-
-### Object (SYMBOL=8)
-- Generic library part — no special inheritance.
-- The object has no built-in relationship to surrounding elements.
-- Most custom parametric objects use this type.
-
-### Door / Window (SYMBOL=20, 21)
-- **Auto-embedded**: ArchiCAD automatically hosts them in walls.
-- **Opening**: the 3D script must include the wall opening geometry (using `CUTFORM` or subtracting geometry).
-- **Sill / Header**: additional parameters for sill height, header depth, and reveal.
-
-## Type Detection in UI
+## Example: Host-Aware Depth Fallback
 
 ```gdl
-! 2D script: different display depending on type
-GLOBALS SYMBOL
-
-IF SYMBOL = 1 THEN
-  ! Show wall connection lines
-  LINE2 -0.5, 0, 0.5, 0
+IF WALL_THICKNESS > 0 THEN
+    _depth = WALL_THICKNESS
 ELSE
-  ! Show free-standing outline
-  CIRCLE 0, 0, 0.1
+    _depth = B
 ENDIF
 ```
 
 ## Edge Cases & Traps
 
-- **Wrong type assignment**: if a door library part is inserted as an OBJECT, it won't create a wall opening automatically — the 3D script must handle opening geometry explicitly.
-- **Type overrides via GDL**: you cannot change `SYMBOL` at runtime — it's determined by how the user places the object in ArchiCAD.
-- **Unknown types**: future ArchiCAD versions may add new SYMBOL values. Always include an `ELSE` branch for unhandled types.
-- **Multiple type support**: a single library part can support multiple SYMBOL types via `IF/ELSIF` branching, but this increases complexity significantly.
+- A generated GDL script cannot turn a generic object into a proper Archicad door or window by setting a variable.
+- Door/window behavior depends on subtype and library part metadata, not only on script text.
+- Host globals such as `WALL_THICKNESS` only make sense in compatible contexts.
+- Always include a generic fallback when using host-dependent information.
+- Avoid hard-coded `SYMBOL` tables unless they are verified against the target Archicad version and object subtype.
 
 ## Related
 
-- [[GLOBALS]] — declaring and using SYMBOL and other context variables
-- [[CUTPLANE]] — cut plane behavior varies by object type
-- [[IF_ENDIF]] — conditional logic based on SYMBOL
-- [[Paramlist_XML]] — type-driven parameter defaults
+- [[GLOBALS]] — using official global variables
+- [[Paramlist_XML]] — explicit object parameters
+- [[HOTSPOT2]] — user-editable 2D controls
