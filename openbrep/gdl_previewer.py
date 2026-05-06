@@ -228,6 +228,15 @@ class _PreviewRuntime:
                 idx += 1
                 continue
 
+            inline_if = _extract_inline_if(line)
+            if inline_if is not None:
+                condition, statement = inline_if
+                should_run = self._eval_condition(condition, line_no)
+                if should_run:
+                    self._exec_block([(line_no, statement)], 0, 1, mode=mode)
+                idx += 1
+                continue
+
             # IF/ENDIF block
             if re.match(r"^IF\b", line, re.IGNORECASE):
                 else_idx, endif_idx = self._find_matching_if_bounds(lines, idx, end)
@@ -1012,6 +1021,18 @@ def _extract_if_condition(line: str) -> str | None:
     return condition or None
 
 
+def _extract_inline_if(line: str) -> tuple[str, str] | None:
+    """Extract one-line GDL IF statements: IF condition THEN statement."""
+    m = re.match(r"^IF\s+(.+?)\s+THEN\s+(.+)$", line, re.IGNORECASE)
+    if not m:
+        return None
+    condition = (m.group(1) or "").strip()
+    statement = (m.group(2) or "").strip()
+    if not condition or not statement:
+        return None
+    return condition, statement
+
+
 def _split_args(text: str) -> list[str]:
     if not text:
         return []
@@ -1043,9 +1064,9 @@ def _extract_points_2d(values: list[float], n: int) -> list[Point2D] | None:
         return None
 
     # Prefer triplets for PRISM_/POLY2 variants with edge-status:
-    # n, h, s1,x1,y1, s2,x2,y2, ...
+    # n, h, x1,y1,s1, x2,y2,s2, ...
     if len(values) >= 3 * n:
-        pairs = [(float(values[3 * i + 1]), float(values[3 * i + 2])) for i in range(n)]
+        pairs = [(float(values[3 * i]), float(values[3 * i + 1])) for i in range(n)]
         return pairs
 
     # Fallback to plain x,y pairs.
@@ -1373,11 +1394,11 @@ _ALLOWED_FUNCS = {
 }
 
 
-def _safe_eval_expr(expr: str, env: dict[str, float]) -> float:
+def _safe_eval_expr(expr: str, env: dict[str, float], *, missing_names_zero: bool = False) -> float:
     """Evaluate numeric expression with a very small safe AST subset."""
     text = expr.strip().replace("^", "**")
     node = ast.parse(text, mode="eval")
-    return float(_eval_ast(node.body, env))
+    return float(_eval_ast(node.body, env, missing_names_zero=missing_names_zero))
 
 
 def _safe_eval_condition(condition: str, env: dict[str, float]) -> bool:
@@ -1395,10 +1416,10 @@ def _safe_eval_condition(condition: str, env: dict[str, float]) -> bool:
 
     m = re.match(r"^(.+?)\s*(<=|>=|<>|#|=|<|>)\s*(.+)$", text)
     if not m:
-        return abs(_safe_eval_expr(text, env)) > 1e-12
+        return abs(_safe_eval_expr(text, env, missing_names_zero=True)) > 1e-12
 
-    left = _safe_eval_expr(m.group(1), env)
-    right = _safe_eval_expr(m.group(3), env)
+    left = _safe_eval_expr(m.group(1), env, missing_names_zero=True)
+    right = _safe_eval_expr(m.group(3), env, missing_names_zero=True)
     op = m.group(2)
     if op == "=":
         return abs(left - right) <= 1e-9
@@ -1415,7 +1436,7 @@ def _safe_eval_condition(condition: str, env: dict[str, float]) -> bool:
     raise ValueError(f"条件运算符不支持: {op}")
 
 
-def _eval_ast(node: ast.AST, env: dict[str, float]) -> float:
+def _eval_ast(node: ast.AST, env: dict[str, float], *, missing_names_zero: bool = False) -> float:
     if isinstance(node, ast.Constant):
         if isinstance(node.value, bool):
             return 1.0 if node.value else 0.0
@@ -1426,12 +1447,14 @@ def _eval_ast(node: ast.AST, env: dict[str, float]) -> float:
     if isinstance(node, ast.Name):
         key = node.id.upper()
         if key not in env:
+            if missing_names_zero:
+                return 0.0
             raise ValueError(f"未定义变量 {node.id}")
         return float(env[key])
 
     if isinstance(node, ast.BinOp):
-        left = _eval_ast(node.left, env)
-        right = _eval_ast(node.right, env)
+        left = _eval_ast(node.left, env, missing_names_zero=missing_names_zero)
+        right = _eval_ast(node.right, env, missing_names_zero=missing_names_zero)
         if isinstance(node.op, ast.Add):
             return left + right
         if isinstance(node.op, ast.Sub):
@@ -1447,7 +1470,7 @@ def _eval_ast(node: ast.AST, env: dict[str, float]) -> float:
         raise ValueError("二元运算符不支持")
 
     if isinstance(node, ast.UnaryOp):
-        v = _eval_ast(node.operand, env)
+        v = _eval_ast(node.operand, env, missing_names_zero=missing_names_zero)
         if isinstance(node.op, ast.UAdd):
             return +v
         if isinstance(node.op, ast.USub):
@@ -1461,7 +1484,7 @@ def _eval_ast(node: ast.AST, env: dict[str, float]) -> float:
         fn = _ALLOWED_FUNCS.get(fname)
         if fn is None:
             raise ValueError(f"函数 {node.func.id} 不支持")
-        args = [_eval_ast(a, env) for a in node.args]
+        args = [_eval_ast(a, env, missing_names_zero=missing_names_zero) for a in node.args]
         return float(fn(*args))
 
     raise ValueError("表达式语法不支持")

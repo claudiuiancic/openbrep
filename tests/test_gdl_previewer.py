@@ -167,6 +167,101 @@ _shelf_gap = (ZZYZX - shelf_thickness * shelf_count) / (shelf_count - 1)
         self.assertFalse(any("未支持命令 TOLER" in w for w in res.warnings))
         self.assertFalse(any("mat_frame" in w or "mat_shelf" in w for w in res.warnings))
 
+    def test_prism_status_triplets_use_gdl_x_y_status_order(self):
+        script = """\
+PRISM_ 3, 0.04,
+    1 * COS(0), 1 * SIN(0), 15,
+    1 * COS(30), 1 * SIN(30), 15,
+    0.1 * COS(0), 0.1 * SIN(0), 15
+"""
+        res = preview_3d_script(script)
+
+        self.assertEqual(len(res.meshes), 1)
+        mesh = res.meshes[0]
+        self.assertAlmostEqual(max(mesh.x), 1.0, places=6)
+        self.assertAlmostEqual(max(mesh.y), 0.5, places=6)
+        self.assertLess(max(abs(y) for y in mesh.y), 1.0)
+
+    def test_spiral_stair_fan_steps_preview(self):
+        script = """\
+TOLER 0.001
+RESOL 36
+
+IF r_outer <= 0 THEN r_outer = 0.8
+IF r_inner <= 0 THEN r_inner = 0.06
+IF r_outer <= r_inner THEN r_outer = r_inner + 0.5
+IF h_total <= 0 THEN h_total = 2.90
+IF n_step < 2 THEN n_step = 16
+IF step_thk <= 0 THEN step_thk = 0.04
+IF ang_total <= 0 THEN ang_total = 180
+IF col_h <= 0 THEN col_h = h_total
+
+_stepH = h_total / n_step
+_stepAng = ang_total / n_step
+
+IF mat_col > 0 THEN
+    MATERIAL mat_col
+ELSE
+    MATERIAL SYMB_MAT
+ENDIF
+
+CYLIND col_h, r_inner
+
+IF mat_step > 0 THEN
+    MATERIAL mat_step
+ELSE
+    MATERIAL SYMB_MAT
+ENDIF
+
+FOR i = 0 TO n_step - 1
+    _z = i * _stepH
+    _baseAng = i * _stepAng
+
+    a0 = 0
+    a1 = _stepAng * 1 / 6
+    a2 = _stepAng * 2 / 6
+    a3 = _stepAng * 3 / 6
+    a4 = _stepAng * 4 / 6
+    a5 = _stepAng * 5 / 6
+    a6 = _stepAng
+
+    ADDZ _z
+    ROTZ _baseAng
+
+    PRISM_ 14, step_thk,
+        r_outer * COS(a0), r_outer * SIN(a0), 15,
+        r_outer * COS(a1), r_outer * SIN(a1), 15,
+        r_outer * COS(a2), r_outer * SIN(a2), 15,
+        r_outer * COS(a3), r_outer * SIN(a3), 15,
+        r_outer * COS(a4), r_outer * SIN(a4), 15,
+        r_outer * COS(a5), r_outer * SIN(a5), 15,
+        r_outer * COS(a6), r_outer * SIN(a6), 15,
+        r_inner * COS(a6), r_inner * SIN(a6), 15,
+        r_inner * COS(a5), r_inner * SIN(a5), 15,
+        r_inner * COS(a4), r_inner * SIN(a4), 15,
+        r_inner * COS(a3), r_inner * SIN(a3), 15,
+        r_inner * COS(a2), r_inner * SIN(a2), 15,
+        r_inner * COS(a1), r_inner * SIN(a1), 15,
+        r_inner * COS(a0), r_inner * SIN(a0), 15
+
+    DEL 2
+NEXT i
+
+ADDZ h_total
+ROTZ ang_total
+ADD r_inner, -0.04, 0
+BLOCK r_outer * 0.95, 0.08, step_thk
+DEL 3
+"""
+        res = preview_3d_script(script)
+
+        self.assertEqual(len(res.meshes), 18)
+        self.assertEqual([mesh.source_ref.command for mesh in res.meshes[:2]], ["CYLIND", "PRISM_"])
+        self.assertFalse(any("IF 缺少匹配 ENDIF" in w for w in res.warnings))
+        self.assertFalse(any("未定义变量" in w for w in res.warnings))
+        self.assertLess(max(max(abs(x) for x in mesh.x) for mesh in res.meshes), 1.0)
+        self.assertLess(max(max(abs(y) for y in mesh.y) for mesh in res.meshes), 1.0)
+
 
 
 if __name__ == "__main__":
