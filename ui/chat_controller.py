@@ -262,6 +262,36 @@ def persist_new_chat_messages(session_state, start_index: int) -> int:
         return 0
 
 
+def is_learning_summary_request(text: str | None) -> bool:
+    raw = (text or "").strip()
+    if not raw:
+        return False
+    compact = raw.replace(" ", "")
+    has_learning_target = any(term in compact for term in ("整理错题本", "生成错题本", "整理学习", "整理记忆"))
+    has_action = any(term in compact for term in ("整理", "生成", "更新", "刷新"))
+    return has_learning_target and has_action
+
+
+def summarize_learning_from_chat_request(session_state, text: str) -> str:
+    project = session_state.get("project")
+    project_name = getattr(project, "name", "") if project is not None else ""
+    work_dir = session_state.get("work_dir", "./workdir")
+    result = ErrorLearningStore(work_dir).summarize_to_skill(project_name=project_name)
+    if result.ok:
+        session_state["learning_notice"] = result.message
+        return (
+            f"{result.message}\n\n"
+            f"已写入：`{result.path}`\n\n"
+            "说明：当前整理链路先用确定性规则扫描聊天记录和已有编译/报错记录，"
+            "再压缩成后续生成会自动注入的本地 Skill；不是再调用一次 LLM 摘要。"
+        )
+    session_state["learning_notice"] = result.message
+    return (
+        f"{result.message}\n\n"
+        "我已经检查当前工作区的聊天记录和错题记录，但没有发现可整理的 GDL 报错线索。"
+    )
+
+
 def run_normal_text_path(
     *,
     effective_input: str,
@@ -563,6 +593,19 @@ def process_chat_turn(
         if handled and should_rerun:
             st.rerun()
     elif effective_input:
+        if is_learning_summary_request(effective_input):
+            session_state.chat_history.append({"role": "user", "content": effective_input})
+            try:
+                msg = summarize_learning_from_chat_request(session_state, effective_input)
+            except Exception as exc:
+                msg = f"整理错题本失败：{exc}"
+                session_state["learning_notice"] = msg
+            session_state.chat_history.append({"role": "assistant", "content": msg})
+            persist_new_chat_messages(session_state, chat_start_index)
+            st.toast("错题本整理完成" if "失败" not in msg else "错题本整理失败", icon="🧠")
+            st.rerun()
+            return
+
         handled, should_rerun, err_msg = run_normal_text_path_fn(
             effective_input,
             runtime["redo_input"],
