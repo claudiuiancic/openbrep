@@ -214,6 +214,46 @@ python -m pytest tests/test_generation_service.py tests/test_llm.py tests/test_l
 python -m pytest tests/ -q
 ```
 
+## GDL 知识上下文契约
+
+GDL 生成不是把整个 `knowledge/` 目录粗暴塞进 prompt。CREATE / IMAGE 请求必须先经过目标相关知识选择：
+
+```text
+openbrep.runtime.pipeline.TaskPipeline
+  → openbrep.knowledge_selector.select_gdl_knowledge
+  → planner_context 给 object_planner
+  → generation_context 给 GDLAgent.generate_only
+```
+
+知识层级：
+
+```text
+knowledge/archetypes/*       构件级建模知识，如 bookshelf、cabinet、door
+knowledge/wiki/*             命令级知识，如 BLOCK、PRISM_、PROJECT2
+knowledge/*.md               基础语法、参数、控制流、常见错误
+.openbrep/knowledge/*        当前 HSF 项目级知识
+.openbrep/skills/*           当前 HSF 项目级 skill
+workspace memory/learnings   错题本与 learned skill
+```
+
+新增或修改 GDL 知识时，必须保持：
+
+- archetype 文档带 frontmatter，至少包含 `id`、`type`、`task_types`、`object_types`、`commands`、`script_types`、`priority`、`tags`。
+- archetype 中引用的核心 GDL 命令应有对应 `knowledge/wiki/<COMMAND>.md`，或者在 lint 脚本中有明确豁免理由。
+- planner 结果必须保留实际 `knowledge_sources`，不能只让 LLM 自己编写来源。
+- object plan report 和 trace 应保留 `knowledge_sources`，用于后续排查生成质量。
+
+知识相关改动至少跑：
+
+```bash
+python knowledge/scripts/lint-knowledge.py knowledge
+python scripts/knowledge_context_smoke.py --json
+python -m pytest tests/test_knowledge_selector.py tests/test_knowledge_lint.py tests/test_knowledge_context_smoke.py tests/test_object_planner.py -q
+python -m pytest tests/ -q
+```
+
+不要把 `CLAUDE.md`、`AGENTS.md`、`index.md`、`log.md` 这类维护说明注入 LLM 生成上下文。
+
 ## 项目生命周期契约
 
 当前项目路径：

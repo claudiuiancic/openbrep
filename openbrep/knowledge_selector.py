@@ -22,8 +22,8 @@ _OBJECT_KEYWORDS: dict[str, tuple[str, ...]] = {
     "bookshelf": ("书架", "书柜", "层板架", "bookshelf", "shelf", "bookcase"),
     "cabinet": ("柜", "柜体", "收纳柜", "鞋柜", "橱柜", "cabinet", "cupboard"),
     "table": ("桌", "桌子", "餐桌", "书桌", "会议桌", "table", "desk"),
-    "door": ("门", "门扇", "门框", "door"),
-    "window": ("窗", "窗户", "窗框", "window"),
+    "door": ("门洞", "平开门", "推拉门", "门扇", "门框", "door"),
+    "window": ("窗户", "外窗", "内窗", "窗洞", "window"),
     "profile_object": ("旋转体", "剖面", "放样", "异形板", "profile", "revolve", "sweep", "extrude"),
 }
 
