@@ -1,83 +1,85 @@
 ---
 type: concept
 status: stable
-tags: [2d, projection, cutplane, section, floor-plan]
-aliases: [CUTPLANE, cutplane, cut plane, section plane, floor plan cut, cut_plane]
-source: raw/ccgdl_dev_doc/docs/GDL_02_Shapes.md
+tags: [3d, geometry, cutting, cutplane, boolean, section]
+aliases: [CUTPLANE, CUTPLANE2, CUTPLANE3, CUTEND, cut plane]
+source: official:gdl.graphisoft.com/reference-guide/cutting-in-3d
 ---
 
 # CUTPLANE
 
-`CUTPLANE` controls the **cut plane height** for 2D floor plan projections. It determines at what height the 3D model is sliced to produce the 2D symbol view. This is critical for doors, windows, columns, and any object that needs to display differently above vs. below the cut plane.
+`CUTPLANE` is a 3D cutting command. It removes parts of enclosed 3D shapes between `CUTPLANE` and `CUTEND`. It is not a floor-plan projection setting and should not be used as a substitute for [[PROJECT2]].
 
-## Syntax
+## Official Syntax
 
 ```gdl
-CUTPLANE x, y, z, nx, ny, nz
+CUTPLANE [x [, y [, z [, side [, status]]]]]
+    statement1
+    ...
+CUTEND
+
+CUTPLANE{2} angle [, status]
+    statement1
+    ...
+CUTEND
+
+CUTPLANE{3} [x [, y [, z [, side [, status]]]]]
+    statement1
+    ...
+CUTEND
 ```
 
-| Param    | Type    | Description                              |
-|----------|---------|------------------------------------------|
-| `x,y,z`  | numeric | A point on the cut plane                 |
-| `nx,ny,nz`| numeric | Normal vector defining plane orientation |
+Parameter interpretation for `CUTPLANE` / `CUTPLANE{3}`:
 
-## How It Works
+| Argument count | Meaning |
+|---|---|
+| 0 | x-y plane |
+| 1 | Plane crosses x axis; value is angle from x-y plane |
+| 2 | Plane parallel to z axis, crossing x and y axes at the given values |
+| 3 | Plane crosses x, y, and z axes at the given values |
+| 4 | Adds `side` to choose which side is removed |
+| 5 | Adds `status` for generated cut surfaces |
 
-1. When ArchiCAD generates the 2D projection of an object, it intersects the 3D geometry with the cut plane defined in the **master script**.
-2. The intersection produces a 2D section that appears in the floor plan.
-3. The default cut plane for floor plans is typically **1.00 m** (or 1000 mm) above the story zero, depending on regional standards and Project Preferences.
+`side = 0` removes parts above the cutting plane. `side = 1` removes parts below the cutting plane.
 
-## Example
+## Recommended OpenBrep Use
 
-### Standard floor plan cut
+- Prefer `CUTPLANE{3}` for new generated code when a parameterized cut plane is needed.
+- Always close each cut with `CUTEND`.
+- Keep transforms used only to position the cutting plane outside the cut body block; remove them before drawing the shape to cut.
+- Use `CUTPLANE` only when actual 3D geometry must be trimmed. For 2D symbols, use [[PROJECT2]], [[HOTSPOT2]], and explicit 2D primitives.
+
+## Examples
+
+### Cut the top of a block
 
 ```gdl
-! Cut at 1.0 m above floor, horizontal plane
-CUTPLANE 0, 0, 1.0, 0, 0, 1
+CUTPLANE{3} 0, 0, cut_z, 0
+BLOCK A, B, ZZYZX
+CUTEND
 ```
 
-### Vertical section
+### Nested cuts
 
 ```gdl
-! Vertical cut along XZ plane
-CUTPLANE 0, 0, 0, 0, 1, 0
-```
-
-## Object Type Defaults
-
-For objects inserted into building elements, ArchiCAD uses:
-
-| Object Type | Default Cut Behavior                              |
-|-------------|---------------------------------------------------|
-| Column      | Cut plane passes through center (always shown)    |
-| Beam        | Cut plane strikes top edge (shown in outline)     |
-| Wall        | Cut at story-specific cut plane height            |
-| Door/Window | Cut plane intersects at mid-height (sill + open)  |
-| Slab        | Cut plane passes below (shown in plan)            |
-
-## Combined with PROJECT2
-
-[[PROJECT2]] generates the actual 2D projection using the current cut plane:
-
-```gdl
-! Master script
-CUTPLANE 0, 0, 1.0, 0, 0, 1
-
-! 2D script — uses the cut plane from master
-PROJECT2 0, 3, 4
+CUTPLANE 0, 0, top_cut_z
+CUTPLANE 0, side_cut_y, 0, 1
+BLOCK A, B, ZZYZX
+CUTEND
+CUTEND
 ```
 
 ## Edge Cases & Traps
 
-- **No CUTPLANE defined**: ArchiCAD uses its default floor plan cut height (typically 1.0 m). This may not match your object's intended display logic.
-- **Cut plane above object**: if the cut plane is above the object's top, no cut geometry appears in the 2D plan (object shown dashed or not at all).
-- **Cut plane below object**: only the outline/shadow appears, no cut fill.
-- **Multiple CUTPLANE definitions**: only the **last** `CUTPLANE` in the master script takes effect. Defining it in 2D script has no effect on the projection.
-- **Normal direction**: the normal should point **upward** (positive Z) for floor plans. An inverted normal flips which side of the cut is visible.
-- **Unit mismatch**: ensure the Z-coordinate matches your project units (meters vs. millimeters).
+- Missing `CUTEND` can make the cut affect every following shape until the end of the script.
+- `CUTPLANE` parameters refer to the current coordinate system at the moment the cut plane is defined.
+- Transformations between `CUTPLANE` and `CUTEND` do not move that already-defined cutting plane; they move the geometry being cut.
+- `CUTPLANE` in a macro affects only the macro geometry.
+- Do not write `CUTPLANE x, y, z, nx, ny, nz`; that point-plus-normal form is not the official GDL syntax.
+- Do not claim `CUTPLANE` defines the floor plan cut height. Use project globals and 2D projection logic for floor-plan representation.
 
 ## Related
 
-- [[PROJECT2]] — generating 2D projection from 3D
-- [[IF_ENDIF]] — conditional display logic based on cut plane
-- [[BLOCK]] — geometry that may appear differently in cut vs. elevation
+- [[PROJECT2]] — 2D projection of 3D geometry
+- [[Transformation_Stack]] — positioning the plane and the cut body
+- [[BLOCK]] — common shape used in cut examples

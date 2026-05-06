@@ -1,84 +1,66 @@
 ---
 type: concept
 status: stable
-tags: [3d, geometry, cylinder, cone, primitives]
-aliases: [CYLIND, cylinder, cone, tube, pipe, cyl]
-source: raw/ccgdl_dev_doc/docs/GDL_10_3D_Commands_Full.md
+tags: [3d, geometry, cylinder, primitives]
+aliases: [CYLIND, cylinder, cylindrical primitive, cyl]
+source: official:gdl.graphisoft.com/reference-guide/basic-shapes
 ---
 
 # CYLIND
 
-`CYLIND` creates a cylinder, cone, or truncated cone in 3D space. It is one of the basic GDL solid primitives alongside [[PRISM_]] and [[BLOCK]].
+`CYLIND` creates a right circular cylinder aligned to the local Z axis. Use it for simple round legs, posts, rods, columns, pins, and similar circular primitives.
 
-## Syntax
+## Official Syntax
 
 ```gdl
-CYLIND x, y, r1, r2, h [, segments]
+CYLIND h, r
 ```
 
-| Param      | Type    | Description                            |
-|------------|---------|----------------------------------------|
-| `x`, `y`   | numeric | Center of base in the working plane    |
-| `r1`       | numeric | Radius at bottom (base)                |
-| `r2`       | numeric | Radius at top                          |
-| `h`        | numeric | Height (extrusion direction = Z)       |
-| `segments` | integer | Optional — circumference resolution    |
+| Param | Type | Meaning |
+|---|---|---|
+| `h` | length | Height along the local Z axis |
+| `r` | length | Radius of the circular section |
 
-## Geometry Rules
+The base circle is centered on the local origin in the x-y plane. Move or rotate the cylinder with the transformation stack (`ADD`, `ROTX`, `ROTY`, `ROTZ`, `DEL`).
 
-- The cylinder base is on the current working plane (XY at `h=0`), centered at `(x, y)`.
-- Extrudes along the **Z axis** by `h` units (positive or negative).
-- `r1 = r2` → straight cylinder.
-- `r1 ≠ r2` → cone or truncated cone.
-- `segments` controls the number of **segments per full circle** for the triangulation:
-  - Default: **24 segments** (enough for most architectural details).
-  - Minimum: **3** (renders as a triangular prism).
-  - Higher values (48–64) for smooth curved surfaces visible up close.
+## Recommended OpenBrep Use
+
+- Use `CYLIND h, r` only for straight cylinders.
+- Use `ADD x, y, z` before `CYLIND` when the cylinder center must move.
+- Use `ROTX 90` or `ROTY 90` before `CYLIND` for horizontal rods.
+- Use [[CONE]] or higher-level polyline shapes for tapered geometry; do not invent a multi-radius `CYLIND`.
+- Prefer [[BLOCK]] or [[PRISM_]] for rectangular or profiled members.
 
 ## Examples
 
-### Simple cylinder
+### Vertical table leg
 
 ```gdl
-CYLIND 0, 0, 0.5, 0.5, 3.0
-```
-A cylinder of radius 0.5 m and height 3.0 m, centered at the origin.
-
-### Cone
-
-```gdl
-CYLIND 0, 0, 0.6, 0.0, 2.0
-```
-A cone with 0.6 m base radius tapering to a point at 2.0 m height.
-
-### Truncated cone with segment control
-
-```gdl
-CYLIND 0, 0, 0.5, 0.3, 1.5, 32
-```
-A 32-segment truncated cone (smoother than default).
-
-## Combined with transforms
-
-```gdl
-ADD 1.5, 0, 0
-  CYLIND 0, 0, 0.3, 0.3, 2.0
+ADD leg_x, leg_y, 0
+CYLIND table_h, leg_r
 DEL 1
 ```
-A column shifted 1.5 m along X.
+
+### Horizontal round rail
+
+```gdl
+ADD 0, rail_y, rail_z
+ROTY 90
+CYLIND rail_len, rail_r
+DEL 2
+```
 
 ## Edge Cases & Traps
 
-- **Zero radius**: `r1 = 0` or `r2 = 0` produces a cone (valid). Both zero → invisible geometry.
-- **Negative height**: `h < 0` extrudes downward. The cylinder is still solid.
-- **Zero height**: no geometry generated (GDL ignores it silently).
-- **Too few segments**: `segments < 3` — GDL clamps to 3, producing a triangular shape.
-- **Working plane orientation**: use [[Transformation_Stack]] (ROT/ADD) to orient cylinders arbitrarily; alone, `CYLIND` always grows along the **local Z**.
-- **Intersection with other primitives**: CYLIND is a **solid** — it performs CSG union with other solids in the same body group.
+- Official syntax is `CYLIND h, r`; it is not `CYLIND x, y, r1, r2, h`.
+- There is no official `segments` argument on `CYLIND`.
+- If `h = 0`, Archicad generates a circle in the x-y plane.
+- If `r = 0`, Archicad generates a line along the z axis.
+- Both `h` and `r` should normally be positive for generated production objects.
+- `CYLIND` does not set material by itself; set material before drawing if needed.
 
 ## Related
 
-- [[PRISM_]] — extruded polygon for non-circular columns
-- [[BLOCK]] — axis-aligned box primitive
-- [[Transformation_Stack]] — positioning and orienting cylinders
-- [[HOTSPOT2]] — adding hotspots to cylinder-based geometry
+- [[BLOCK]] — simple rectangular primitive
+- [[PRISM_]] — extruded polygon profile
+- [[Transformation_Stack]] — positioning and orientation

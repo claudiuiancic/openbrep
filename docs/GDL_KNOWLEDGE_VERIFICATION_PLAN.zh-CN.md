@@ -59,7 +59,7 @@ python scripts/verify_gdl_knowledge_sources.py \
 | 批次 | 范围 | 文件 | 目标 |
 |---|---|---|---|
 | P0 已完成 | 最高风险生成命令 | `BLOCK`、`PROJECT2`、`HOTSPOT2`、`MATERIAL`、`REVOLVE`、`SWEEP` | 修掉伪语法和误导性简写 |
-| P1 | 核心 3D 几何 | `PRISM_`、`CYLIND`、`CUTPLANE`、`BODY_EDGE_PGON` | 确认参数顺序、状态码、退化几何、布尔/裁切边界 |
+| P1 已完成 | 核心 3D 几何 | `PRISM_`、`CYLIND`、`CUTPLANE`、`BODY_EDGE_PGON` | 确认参数顺序、状态码、退化几何、布尔/裁切边界 |
 | P2 | 变换与控制流 | `ADD_DEL`、`Transformation_Stack`、`FOR_NEXT`、`IF_ENDIF` | 防止 ADD/DEL、FOR/NEXT、IF/ENDIF 结构性错误 |
 | P3 | 2D 表达 | `2D_Primitives`、`PROJECT2`、`HOTSPOT2` | 校对平面符号、热点编辑、投影策略 |
 | P4 | 参数与属性 | `Paramlist_XML`、`DEFINE`、`MATERIAL`、`GLOBALS`、`Object_Types` | 校对参数类型、材质/属性、对象类型、全局变量 |
@@ -75,9 +75,9 @@ python scripts/verify_gdl_knowledge_sources.py \
 - `lint-knowledge.py` 通过。
 - 全量测试通过。
 
-## P1 立即执行清单
+## P1 完成记录
 
-优先校对：
+已校对：
 
 ```text
 knowledge/wiki/PRISM_.md
@@ -86,11 +86,32 @@ knowledge/wiki/CUTPLANE.md
 knowledge/wiki/BODY_EDGE_PGON.md
 ```
 
+完成结果：
+
+- `PRISM_` 明确 `n, h, x, y, s` 顺序，并修正带洞示例的点数。
+- `CYLIND` 修正为官方 `CYLIND h, r`，删除中心点、双半径、segments 的伪语法。
+- `CUTPLANE` 修正为 3D 裁切命令，明确必须与 `CUTEND` 成对使用。
+- `BODY_EDGE_PGON` 修正为 `VERT` / `EDGE` / `PGON` / `BODY` 低层 primitive 流程，并标注为 AI 非默认高级命令。
+- `tests/test_knowledge_lint.py` 增加 P1 语法防回退断言。
+
+Python 访问 Graphisoft index 时本地出现 SSL EOF，在线官方文档通过浏览器侧确认；自动验收以本地 lint、上下文 smoke、目标测试和全量测试为准。
+
+## P2 立即执行清单
+
+优先校对：
+
+```text
+knowledge/wiki/ADD_DEL.md
+knowledge/wiki/Transformation_Stack.md
+knowledge/wiki/FOR_NEXT.md
+knowledge/wiki/IF_ENDIF.md
+```
+
 重点查：
 
-- `PRISM_` 的 `n, h, x, y, s` 顺序和状态码说明。
-- `CYLIND` 的 `h, r`、零高/零半径退化行为。
-- `CUTPLANE` / `CUTEND` 是否被写成错误的裁切流程。
-- `BODY_EDGE_PGON` 是否适合作为 AI 默认生成命令；若不适合，应标注为高级/非默认。
+- `ADD` / `ROT` / `MUL` / `DEL` 的栈平衡和嵌套写法。
+- `DEL n` 的数量是否与累计变换严格匹配。
+- `FOR ... NEXT` 的变量、步长、边界和缩进策略。
+- `IF ... THEN` / `ENDIF` 是否避免伪 Python 风格和缺失闭合。
 
-P1 完成后再进入 P2，不并行铺开。
+P2 完成后再进入 P3，不并行铺开。

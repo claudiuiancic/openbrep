@@ -3,18 +3,18 @@ type: concept
 status: stable
 tags: [prism, 3d, geometry, extrusion, polygon, polyhedron]
 aliases: [PRISM, prism command, gdl prism]
-source: raw/ccgdl_dev_doc/docs/GDL_02_Shapes.md
+source: official:gdl.graphisoft.com/reference-guide/basic-shapes
 ---
 
 # PRISM_
 
-`PRISM_` is the primary GDL command for creating prismatic (extruded) 3D bodies from a 2D polygon profile. It is the most versatile and commonly used 3D geometry command in GDL.
+`PRISM_` creates a right prism from a 2D polygon profile in the local x-y plane. It is the default OpenBrep command for extruded profiles that are more complex than a simple [[BLOCK]].
 
 ## Why PRISM_?
 
-Building geometry is rarely just boxes and cylinders. Walls have openings, columns have profiles, roof eaves have complex cross-sections. `PRISM_` handles all of these: you define a 2D polygon (with holes if needed), extrude it to a height, and control edge visibility per segment.
+Building geometry is rarely just boxes and cylinders. Walls have openings, columns have profiles, roof eaves have complex cross-sections. `PRISM_` handles these cases by defining a 2D polygon, extruding it along the local z axis, and controlling edge or side visibility per polygon point.
 
-## Syntax
+## Official Syntax
 
 ```gdl
 PRISM_ n, h, x1, y1, s1, ..., xn, yn, sn
@@ -22,8 +22,8 @@ PRISM_ n, h, x1, y1, s1, ..., xn, yn, sn
 
 | Param | Type   | Description                                      |
 |-------|--------|--------------------------------------------------|
-| `n`   | int    | Number of vertices                                |
-| `h`   | length | Extrusion height (Z direction)                    |
+| `n`   | int    | Number of polygon points, including contour-closing and hole-closing points |
+| `h`   | length | Prism height along the local Z axis               |
 | `x, y`| length | Vertex coordinates (2D polygon in XY plane)       |
 | `s`   | int    | Status code per vertex (edge visibility + holes)  |
 
@@ -58,7 +58,7 @@ PRISM_ 3, 2.0,
 ### Rectangle with hole
 
 ```gdl
-PRISM_ 8, 1.0,
+PRISM_ 9, 1.0,
     ! Outer contour (clockwise) — all edges visible
     0,   0,   15,
     2.0, 0,   15,
@@ -85,11 +85,12 @@ PRISM_ 4, 1.5,
 
 ## Edge Cases & Traps
 
+- **Argument count**: after `n` and `h`, there must be exactly `n` triplets of `x, y, s`.
 - **Zero height** (`h = 0`): degenerates to a 2D polygon (no volume).
 - **Self-intersecting polygon**: undefined behavior; ArchiCAD may reject it.
-- **Vertex count limit**: practical max ~10,000 vertices (depends on polygon complexity).
-- **Hole winding**: outer contour clockwise, inner counter-clockwise. Wrong winding flips the boolean operation.
-- **Status `-1` is required** between contours; omitting it merges vertices into a single invalid polygon.
+- **Hole count**: the duplicated closing point with status `-1` counts toward `n`.
+- **Hole winding**: keep contour and holes consistent. Wrong winding can flip or invalidate the boolean operation.
+- **Status `-1` is required** at the end of a contour before starting a hole; omitting it merges vertices into a single invalid polygon.
 - **Coordinate system**: `PRISM_` works in the current [[Transformation_Stack]] context. `ADD`/`DEL` and `ROT` affect where the prism appears.
 
 ## Related
