@@ -46,6 +46,8 @@ from ui import project_service as ui_project_service
 from ui import revision_controller as ui_revision_controller
 from ui import chat_controller as ui_chat_controller
 from ui import chat_paths as ui_chat_paths
+from ui import chat_runtime as ui_chat_runtime
+from ui import chat_tapir_events as ui_chat_tapir_events
 from ui import tapir_controller as ui_tapir_controller
 from ui import tapir_views as ui_tapir_views
 from ui import vision_controller as ui_vision_controller
@@ -1003,7 +1005,7 @@ _maybe_build_followup_bridge_input = ui_view_models.maybe_build_followup_bridge_
 
 
 def _resolve_bridge_input(pending_bridge_idx, user_input: str | None, history: list[dict], has_project: bool) -> str | None:
-    return ui_chat_controller.resolve_bridge_input(
+    return ui_chat_runtime.resolve_bridge_input(
         pending_bridge_idx=pending_bridge_idx,
         user_input=user_input,
         history=history,
@@ -1020,7 +1022,7 @@ _is_post_clarification_prompt = ui_view_models.is_post_clarification_prompt
 
 
 def _resolve_effective_input(active_debug_mode, user_input: str | None, has_image_input: bool, auto_debug_input: str | None, bridge_input: str | None, redo_input: str | None) -> tuple[str | None, bool, bool]:
-    return ui_chat_controller.resolve_effective_input(
+    return ui_chat_runtime.resolve_effective_input(
         active_debug_mode=active_debug_mode,
         user_input=user_input,
         has_image_input=has_image_input,
@@ -1032,7 +1034,7 @@ def _resolve_effective_input(active_debug_mode, user_input: str | None, has_imag
 
 
 def _resolve_image_route_mode(route_pick: str, active_debug_mode, joined_text: str, vision_name: str) -> str:
-    return ui_chat_controller.resolve_image_route_mode(
+    return ui_chat_runtime.resolve_image_route_mode(
         route_pick=route_pick,
         active_debug_mode=active_debug_mode,
         joined_text=joined_text,
@@ -1043,18 +1045,18 @@ def _resolve_image_route_mode(route_pick: str, active_debug_mode, joined_text: s
 
 
 def _build_image_user_display(vision_name: str, route_mode: str, joined_text: str) -> str:
-    return ui_chat_controller.build_image_user_display(vision_name, route_mode, joined_text)
+    return ui_chat_runtime.build_image_user_display(vision_name, route_mode, joined_text)
 
 
 def _pop_chat_runtime_state(has_image_input: bool) -> dict:
-    return ui_chat_controller.pop_chat_runtime_state(
+    return ui_chat_runtime.pop_chat_runtime_state(
         session_state=st.session_state,
         has_image_input=has_image_input,
     )
 
 
 def _handle_tapir_test_trigger(tapir_trigger: bool) -> tuple[bool, bool]:
-    return ui_chat_controller.handle_tapir_test_trigger(
+    return ui_chat_tapir_events.handle_tapir_test_trigger(
         tapir_trigger=tapir_trigger,
         tapir_import_ok=_TAPIR_IMPORT_OK,
         get_bridge_fn=get_bridge,
@@ -1064,7 +1066,7 @@ def _handle_tapir_test_trigger(tapir_trigger: bool) -> tuple[bool, bool]:
 
 
 def _handle_tapir_selection_trigger(tapir_selection_trigger: bool) -> tuple[bool, bool]:
-    return ui_chat_controller.handle_tapir_selection_trigger(
+    return ui_chat_tapir_events.handle_tapir_selection_trigger(
         tapir_selection_trigger=tapir_selection_trigger,
         tapir_import_ok=_TAPIR_IMPORT_OK,
         tapir_sync_selection_fn=_tapir_sync_selection,
@@ -1073,7 +1075,7 @@ def _handle_tapir_selection_trigger(tapir_selection_trigger: bool) -> tuple[bool
 
 
 def _handle_tapir_highlight_trigger(tapir_highlight_trigger: bool) -> tuple[bool, bool]:
-    return ui_chat_controller.handle_tapir_highlight_trigger(
+    return ui_chat_tapir_events.handle_tapir_highlight_trigger(
         tapir_highlight_trigger=tapir_highlight_trigger,
         tapir_import_ok=_TAPIR_IMPORT_OK,
         tapir_highlight_selection_fn=_tapir_highlight_selection,
@@ -1081,7 +1083,7 @@ def _handle_tapir_highlight_trigger(tapir_highlight_trigger: bool) -> tuple[bool
 
 
 def _handle_tapir_load_params_trigger(tapir_load_params_trigger: bool) -> tuple[bool, bool]:
-    return ui_chat_controller.handle_tapir_load_params_trigger(
+    return ui_chat_tapir_events.handle_tapir_load_params_trigger(
         tapir_load_params_trigger=tapir_load_params_trigger,
         tapir_import_ok=_TAPIR_IMPORT_OK,
         tapir_load_selected_params_fn=_tapir_load_selected_params,
@@ -1090,7 +1092,7 @@ def _handle_tapir_load_params_trigger(tapir_load_params_trigger: bool) -> tuple[
 
 
 def _handle_tapir_apply_params_trigger(tapir_apply_params_trigger: bool) -> tuple[bool, bool]:
-    return ui_chat_controller.handle_tapir_apply_params_trigger(
+    return ui_chat_tapir_events.handle_tapir_apply_params_trigger(
         tapir_apply_params_trigger=tapir_apply_params_trigger,
         tapir_import_ok=_TAPIR_IMPORT_OK,
         tapir_apply_param_edits_fn=_tapir_apply_param_edits,
