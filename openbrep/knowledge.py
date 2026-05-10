@@ -15,6 +15,16 @@ from pathlib import Path
 from typing import Optional
 
 
+KNOWLEDGE_SKIP_FILES = {
+    "AGENTS.md",
+    "CHANGELOG.md",
+    "CLAUDE.md",
+    "README.md",
+    "index.md",
+    "log.md",
+}
+
+
 class KnowledgeBase:
     """
     Manages GDL reference documentation for RAG-style prompt injection.
@@ -64,9 +74,8 @@ class KnowledgeBase:
             return
 
         # Free tier: top-level *.md. Keep maintenance/agent notes out of LLM context.
-        _skip = {"README", "CHANGELOG", "CLAUDE", "AGENTS", "index", "log"}
         for md_file in sorted(self.knowledge_dir.glob("*.md")):
-            if md_file.stem in _skip:
+            if md_file.name in KNOWLEDGE_SKIP_FILES:
                 continue
             try:
                 self._docs[md_file.stem] = md_file.read_text(encoding="utf-8")
@@ -77,7 +86,7 @@ class KnowledgeBase:
         pro_dir = self.knowledge_dir / "raw" / "ccgdl_dev_doc" / "docs"
         if pro_dir.exists():
             for md_file in sorted(pro_dir.glob("*.md")):
-                if md_file.stem in _skip:
+                if md_file.name in KNOWLEDGE_SKIP_FILES:
                     continue
                 try:
                     self._docs[f"pro_{md_file.stem}"] = md_file.read_text(encoding="utf-8")

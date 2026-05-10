@@ -2,7 +2,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from openbrep.knowledge import KnowledgeBase
+from openbrep.knowledge import KNOWLEDGE_SKIP_FILES, KnowledgeBase
 from openbrep.knowledge_selector import select_gdl_knowledge
 
 
@@ -86,6 +86,8 @@ class TestKnowledgeBaseNoiseFiltering(unittest.TestCase):
             root = Path(tmpdir)
             (root / "GDL_quick_reference.md").write_text("real knowledge", encoding="utf-8")
             (root / "CLAUDE.md").write_text("agent notes", encoding="utf-8")
+            (root / "README.md").write_text("readme noise", encoding="utf-8")
+            (root / "AGENTS.md").write_text("agent rules", encoding="utf-8")
             (root / "index.md").write_text("index noise", encoding="utf-8")
             (root / "log.md").write_text("maintenance log", encoding="utf-8")
 
@@ -94,8 +96,17 @@ class TestKnowledgeBaseNoiseFiltering(unittest.TestCase):
 
         self.assertIn("GDL_quick_reference", kb.doc_names)
         self.assertNotIn("CLAUDE", kb.doc_names)
+        self.assertNotIn("README", kb.doc_names)
+        self.assertNotIn("AGENTS", kb.doc_names)
         self.assertNotIn("index", kb.doc_names)
         self.assertNotIn("log", kb.doc_names)
+
+    def test_skip_file_policy_is_module_level_and_filename_based(self):
+        self.assertIn("CLAUDE.md", KNOWLEDGE_SKIP_FILES)
+        self.assertIn("README.md", KNOWLEDGE_SKIP_FILES)
+        self.assertIn("AGENTS.md", KNOWLEDGE_SKIP_FILES)
+        self.assertIn("index.md", KNOWLEDGE_SKIP_FILES)
+        self.assertIn("log.md", KNOWLEDGE_SKIP_FILES)
 
 
 if __name__ == "__main__":
