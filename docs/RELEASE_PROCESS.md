@@ -55,10 +55,11 @@ The two `rev-parse` commands must print the same commit hash. The tag push will
 trigger the installer build workflow. For `v*` tags, that workflow should:
 
 1. Build macOS and Windows installer zip files.
-2. Upload them as workflow artifacts.
-3. Create or update the matching GitHub Release.
-4. Attach `OpenBrep-*-macOS.zip` and `OpenBrep-*-Windows.zip` as release assets.
-5. State supported OS versions and CPU architectures in the GitHub Release
+2. Smoke-test the generated zips before upload.
+3. Upload them as workflow artifacts.
+4. Create or update the matching GitHub Release.
+5. Attach `OpenBrep-*-macOS.zip` and `OpenBrep-*-Windows.zip` as release assets.
+6. State supported OS versions and CPU architectures in the GitHub Release
    notes. Do not publish a generic `macOS` claim when the asset is only
    `arm64` or only `x86_64`.
 
@@ -81,6 +82,11 @@ Installer verification must cover both startup and browser rendering.
 python scripts/package_smoke.py release/OpenBrep-free-macOS.zip --timeout 90
 python scripts/package_browser_smoke.py release/OpenBrep-free-macOS.zip --timeout 90
 ```
+
+- The GitHub `Build installers` workflow runs package smoke automatically
+  before uploading artifacts: macOS runs both package smoke and browser smoke;
+  Windows runs package smoke. If any smoke step fails, the release publish job
+  is blocked.
 
 Packaging regressions fixed in v0.6.11:
 

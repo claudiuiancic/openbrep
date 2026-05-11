@@ -34,6 +34,34 @@ jobs:
         shell: pwsh
         run: ./scripts/build_windows.ps1
 
+      - name: Smoke-test macOS package
+        if: runner.os == 'macOS'
+        run: |
+          ZIP="$(ls release/OpenBrep-*-macOS.zip | head -n 1)"
+          python scripts/package_smoke.py "$ZIP" --timeout 90
+
+      - name: Install Playwright browser
+        if: runner.os == 'macOS'
+        run: |
+          python -m pip install playwright
+          python -m playwright install chromium
+
+      - name: Browser-smoke macOS package
+        if: runner.os == 'macOS'
+        run: |
+          ZIP="$(ls release/OpenBrep-*-macOS.zip | head -n 1)"
+          python scripts/package_browser_smoke.py "$ZIP" --timeout 120
+
+      - name: Smoke-test Windows package
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $zip = Get-ChildItem release/OpenBrep-*-Windows.zip | Select-Object -First 1
+          if (-not $zip) {
+            throw "No Windows package zip found in release/"
+          }
+          python scripts/package_smoke.py $zip.FullName --timeout 120
+
       - name: Upload macOS artifact
         if: runner.os == 'macOS'
         uses: actions/upload-artifact@v4
