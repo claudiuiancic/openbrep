@@ -1,0 +1,14 @@
+---
+id: wiki.generated.ui_custom_popup_infield
+type: wiki
+category: other
+commands: ["UI_CUSTOM_POPUP_INFIELD"]
+task_types: [create, modify, repair]
+priority: 70
+source: GDL Reference Guide 28 (auto-generated)
+status: draft
+---
+
+###### UI_CUSTOM_POPUP_INFIELD
+
+UI_CUSTOM_POPUP_INFIELD "name", x, y, width, height, storeHiddenId, treeDepth, groupingMethod, selectedValDescription, value1, value2, valuesArray1, .... valuen, valuesArrayn
