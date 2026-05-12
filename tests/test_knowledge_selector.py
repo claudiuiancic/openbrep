@@ -131,6 +131,7 @@ class TestKnowledgeBaseNoiseFiltering(unittest.TestCase):
             (root / "AGENTS.md").write_text("agent rules", encoding="utf-8")
             (root / "index.md").write_text("index noise", encoding="utf-8")
             (root / "log.md").write_text("maintenance log", encoding="utf-8")
+            (root / ".DS_Store").write_text("finder metadata", encoding="utf-8")
 
             kb = KnowledgeBase(str(root))
             kb.load()
@@ -141,6 +142,7 @@ class TestKnowledgeBaseNoiseFiltering(unittest.TestCase):
         self.assertNotIn("AGENTS", kb.doc_names)
         self.assertNotIn("index", kb.doc_names)
         self.assertNotIn("log", kb.doc_names)
+        self.assertNotIn(".DS_Store", kb.doc_names)
 
     def test_skip_file_policy_is_module_level_and_filename_based(self):
         self.assertIn("CLAUDE.md", KNOWLEDGE_SKIP_FILES)
@@ -148,6 +150,7 @@ class TestKnowledgeBaseNoiseFiltering(unittest.TestCase):
         self.assertIn("AGENTS.md", KNOWLEDGE_SKIP_FILES)
         self.assertIn("index.md", KNOWLEDGE_SKIP_FILES)
         self.assertIn("log.md", KNOWLEDGE_SKIP_FILES)
+        self.assertIn(".DS_Store", KNOWLEDGE_SKIP_FILES)
 
 
 if __name__ == "__main__":

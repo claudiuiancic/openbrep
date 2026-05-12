@@ -64,6 +64,46 @@ def _make_pipeline(llm_content: str) -> TaskPipeline:
     return pipeline
 
 
+class TestWikiKnowledgeSelection(unittest.TestCase):
+    """CREATE / IMAGE should use wiki retrieval, update intents should not."""
+
+    def test_create_intent_invokes_wiki_search(self):
+        pipeline = _make_pipeline("[FILE: scripts/3d.gdl]\nBLOCK A, B, ZZYZX\nEND\n")
+        calls = {"count": 0}
+
+        def fake_get_relevant(self_wiki, query, max_pages=3):
+            calls["count"] += 1
+            return []
+
+        with patch("openbrep.wiki_knowledge.WikiKnowledge.get_relevant", fake_get_relevant):
+            pipeline.execute(TaskRequest(
+                user_input="做一个参数化书架",
+                intent="CREATE",
+                project=_make_project(),
+                work_dir="./workdir",
+            ))
+
+        self.assertGreater(calls["count"], 0)
+
+    def test_modify_intent_does_not_invoke_wiki_search(self):
+        pipeline = _make_pipeline("脚本没有问题。")
+        calls = {"count": 0}
+
+        def fake_get_relevant(self_wiki, query, max_pages=3):
+            calls["count"] += 1
+            return []
+
+        with patch("openbrep.wiki_knowledge.WikiKnowledge.get_relevant", fake_get_relevant):
+            pipeline.execute(TaskRequest(
+                user_input="把书架加一个抽屉",
+                intent="MODIFY",
+                project=_make_project(),
+                work_dir="./workdir",
+            ))
+
+        self.assertEqual(calls["count"], 0)
+
+
 # ── Tests: routing ────────────────────────────────────────
 
 class TestModifyRouting(unittest.TestCase):

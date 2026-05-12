@@ -90,11 +90,12 @@ def select_gdl_knowledge(
         generation_parts.append(archetype_context)
         source_ids.extend(f"archetype.{key}" for key in object_keys)
 
-    wiki_context, wiki_sources = _load_wiki_context(root, instruction, task_type, object_keys)
-    if wiki_context:
-        planner_parts.append(wiki_context)
-        generation_parts.append(wiki_context)
-        source_ids.extend(wiki_sources)
+    if task_type in {"create", "image"}:
+        wiki_context, wiki_sources = _load_wiki_context(root, instruction, task_type, object_keys)
+        if wiki_context:
+            planner_parts.append(wiki_context)
+            generation_parts.append(wiki_context)
+            source_ids.extend(wiki_sources)
 
     core_context = _compact_core_context(base_context, task_type=task_type)
     if core_context:

@@ -22,6 +22,7 @@ KNOWLEDGE_SKIP_FILES = {
     "README.md",
     "index.md",
     "log.md",
+    ".DS_Store",
 }
 
 
