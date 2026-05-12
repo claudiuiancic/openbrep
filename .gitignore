@@ -18,6 +18,9 @@ src/
 .qoder/
 .qwen/
 knowledge/raw/ccgdl_dev_doc/
+generated/gdl_pdf_knowledge/
+# Auto-generated PDF wiki drafts must stay out of the curated wiki.
+knowledge/wiki/[a-z0-9_]*.md
 ui/app.py.backup_*
 
 # build artifacts
