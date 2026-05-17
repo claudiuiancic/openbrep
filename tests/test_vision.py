@@ -230,6 +230,16 @@ class TestRouterImageIntent(unittest.TestCase):
     def test_no_image_text_only(self):
         self.assertEqual(self.router.classify("做一个书架"), "CREATE")
 
+    def test_gdl_wiki_teaching_question_stays_chat_with_project(self):
+        self.assertEqual(self.router.classify("CYLIND 语法", has_project=True), "CHAT")
+        self.assertEqual(self.router.classify("解释 BLOCK 的用法", has_project=True), "CHAT")
+
+    def test_imperative_syntax_check_still_routes_to_update_path(self):
+        self.assertIn(
+            self.router.classify("请检查这个脚本的语法", has_project=True),
+            ("MODIFY", "DEBUG"),
+        )
+
 
 # ── 6. Pipeline IMAGE → vision 前置 ───────────────────────
 

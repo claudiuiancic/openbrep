@@ -37,6 +37,14 @@ _CHAT_ONLY_PATTERNS = [
     r"^(怎么|如何|什么是).*(gdl|archicad|hsf|构件)",
 ]
 
+_KNOWLEDGE_QUESTION_PATTERNS = [
+    r"(什么是|介绍|讲解|解释|说明|含义|概念|区别)",
+    r"(怎么用|如何使用|用法|语法|命令|参数|示例|例子|教学)",
+]
+
+_QUESTION_PREFIX_RE = re.compile(r"^\s*(什么|怎么|怎样|如何|为何|为什么|请问)")
+_COMMAND_NAME_RE = re.compile(r"\b[A-Z_]{3,}(?:\{\d+\})?\b")
+
 _CREATE_KEYWORDS = [
     "创建", "生成", "新建", "做一个", "建一个", "写一个",
     "make", "create", "generate",
@@ -67,6 +75,39 @@ def _is_pure_chat(text: str) -> bool:
 def _is_gdl_intent(text: str) -> bool:
     t = text.lower()
     return any(kw in t for kw in _GDL_KEYWORDS)
+
+
+def _is_gdl_knowledge_question(text: str) -> bool:
+    """True for GDL teaching/wiki questions that must stay in CHAT."""
+    raw = (text or "").strip()
+    if not raw:
+        return False
+    low = raw.lower()
+    up = raw.upper()
+    has_gdl_topic = (
+        _is_gdl_intent(raw)
+        or bool(_COMMAND_NAME_RE.search(up))
+        or any(cmd in up for cmd in ["CYLIND", "PRISM_", "BLOCK", "PROJECT2", "RECT2", "POLY2"])
+    )
+    if not has_gdl_topic:
+        return False
+
+    has_question_signal = (
+        _QUESTION_PREFIX_RE.search(raw) is not None
+        or any(re.search(pattern, raw, re.IGNORECASE) for pattern in _KNOWLEDGE_QUESTION_PATTERNS)
+        or raw.endswith(("?", "？"))
+    )
+    if not has_question_signal:
+        return False
+
+    # Imperative edit/check requests should still go to MODIFY/DEBUG.
+    if not _QUESTION_PREFIX_RE.search(raw):
+        if re.search(r"(帮我|请|给我|直接|现在|把|将).*(修改|添加|删除|修复|编译|生成|创建|写入|替换|调整|更新|检查)", low):
+            return False
+        if re.search(r"^(修改|添加|删除|修复|编译|生成|创建|写入|替换|调整|更新|检查)", low):
+            return False
+
+    return True
 
 
 def _is_debug_intent(text: str) -> bool:
@@ -123,6 +164,11 @@ class IntentRouter:
             One of "CREATE", "MODIFY", "DEBUG", "IMAGE", "CHAT".
         """
         if _is_pure_chat(user_input):
+            return "CHAT"
+
+        # GDL/wiki teaching questions may include code samples or command names.
+        # They are explanatory chat, not source changes, even when a project is loaded.
+        if _is_gdl_knowledge_question(user_input):
             return "CHAT"
 
         # Archicad error log / explicit debug prefix always wins

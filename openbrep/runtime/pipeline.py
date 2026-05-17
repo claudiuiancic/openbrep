@@ -243,6 +243,14 @@ class TaskPipeline:
                 self._skill_creator = None
             return TaskResult(success=True, intent="CHAT", plain_text=reply)
 
+        # ── Wiki teaching / GDL knowledge answers ──
+        # Explicit GDL command/syntax questions may include code examples. Keep
+        # them in chat before project explanation or modify/compile workflows.
+        if not is_greeting and self._has_gdl_keyword(request.user_input):
+            wiki_result = self._handle_wiki_knowledge(request)
+            if wiki_result is not None:
+                return wiki_result
+
         # ── Skill intent detection ──
         if not is_greeting:
             creator = self._get_skill_creator(request)

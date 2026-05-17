@@ -77,6 +77,25 @@ class TestPipelineChat(unittest.TestCase):
         mock_explain.assert_called_once_with({"gsm_name": "chair"})
         mock_reply.assert_called_once_with(fake_explanation, user_input="这是什么对象？")
 
+    def test_gdl_wiki_teaching_with_project_stays_chat_and_does_not_compile(self):
+        pipeline = self._make_pipeline("CYLIND 语法说明\n\n```gdl\nCYLIND h, r\n```")
+        project = HSFProject.create_new("chair", work_dir="./workdir")
+        project.scripts[ScriptType.SCRIPT_3D] = "BLOCK A, B, ZZYZX\nEND\n"
+        pipeline._make_compiler = MagicMock()
+
+        result = pipeline.execute(TaskRequest(
+            user_input="CYLIND 语法",
+            project=project,
+        ))
+
+        self.assertTrue(result.success)
+        self.assertEqual(result.intent, "CHAT")
+        self.assertEqual(result.scripts, {})
+        self.assertIsNone(result.compile_result)
+        self.assertNotIn("变更摘要", result.plain_text)
+        self.assertNotIn("编译通过", result.plain_text)
+        pipeline._make_compiler.assert_not_called()
+
     def test_chat_with_project_uses_script_target_explainer(self):
         pipeline = self._make_pipeline("ok")
         project = HSFProject.create_new("chair", work_dir="./workdir")
