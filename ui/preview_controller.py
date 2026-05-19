@@ -90,7 +90,7 @@ def collect_preview_prechecks(
                 continue
             warns.append(f"[validator] {issue}")
     except Exception as e:
-        warns.append(f"[validator] 执行失败: {e}")
+        warns.append(f"[validator] execution failed: {e}")
 
     return dedupe_keep_order_fn(warns)
 
@@ -136,7 +136,7 @@ def run_preview(
             set_preview_2d_data_fn(res_2d)
             set_preview_warnings_fn(dedupe_keep_order_fn([*pre_warns, *res_2d.warnings]))
             set_preview_meta_fn({"kind": "2D", "timestamp": ts})
-            return True, "✅ 2D 预览已更新"
+            return True, "✅ 2D preview updated"
 
         if target == "3d":
             res_3d = preview_3d_script(
@@ -150,14 +150,14 @@ def run_preview(
             set_preview_3d_data_fn(res_3d)
             set_preview_warnings_fn(dedupe_keep_order_fn([*pre_warns, *res_3d.warnings]))
             set_preview_meta_fn({"kind": "3D", "timestamp": ts})
-            return True, "✅ 3D 预览已更新"
+            return True, "✅ 3D preview updated"
 
-        return False, f"❌ 未知预览类型: {target}"
+        return False, f"❌ Unknown preview type: {target}"
 
     except Exception as e:
         set_preview_warnings_fn(dedupe_keep_order_fn([
             *pre_warns,
-            f"[preview] 执行失败: {e}",
+            f"[preview] execution failed: {e}",
         ]))
         set_preview_meta_fn({"kind": target.upper(), "timestamp": ts})
-        return False, f"❌ 预览失败: {e}"
+        return False, f"❌ Preview failed: {e}"

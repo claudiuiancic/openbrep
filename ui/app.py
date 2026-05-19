@@ -217,7 +217,7 @@ def _build_generation_reply(plain_text: str, result_prefix: str = "", code_block
 
 
 def _reset_tapir_p0_state() -> None:
-    """清理 Tapir P0（Inspector + Workbench）缓存。"""
+    """Clear Tapir P0 (Inspector + Workbench) cache."""
     st.session_state.tapir_selection_trigger = False
     st.session_state.tapir_highlight_trigger = False
     st.session_state.tapir_load_params_trigger = False
@@ -486,9 +486,9 @@ def _render_tapir_param_workbench_panel() -> None:
 _HAS_DIALOG = hasattr(st, "dialog")
 
 if _HAS_DIALOG:
-    @st.dialog("⛶ 全屏编辑", width="large")
+    @st.dialog("⛶ Fullscreen Edit", width="large")
     def _fullscreen_editor_dialog(stype: "ScriptType", fpath: str, label: str) -> None:
-        st.caption(f"**{label}** 脚本 · 全屏模式 — 编辑完成点「✅ 应用」")
+        st.caption(f"**{label}** script · Fullscreen mode — click '✅ Apply' when done")
         code = (st.session_state.project or HSFProject.create_new("untitled")).get_script(stype) or ""
         if _ACE_AVAILABLE:
             _raw_fs = st_ace(
@@ -503,17 +503,17 @@ if _HAS_DIALOG:
                                     label_visibility="collapsed", key=f"fs_ta_{fpath}") or ""
         c1, c2 = st.columns([2, 6])
         with c1:
-            if st.button("✅ 应用", type="primary", width='stretch'):
+            if st.button("✅ Apply", type="primary", width='stretch'):
                 if st.session_state.project:
                     st.session_state.project.set_script(stype, new_code)
                     _bump_main_editor_version()
                 st.rerun()
         with c2:
-            if st.button("❌ 取消", width='stretch'):
+            if st.button("❌ Cancel", width='stretch'):
                 st.rerun()
 else:
     def _fullscreen_editor_dialog(stype, fpath, label):  # type: ignore[misc]
-        st.info("全屏编辑需要 Streamlit ≥ 1.36，请升级：`pip install -U streamlit`")
+        st.info("Fullscreen editing requires Streamlit ≥ 1.36; please upgrade: `pip install -U streamlit`")
 
 
 def get_compiler():
@@ -800,7 +800,7 @@ def _bump_main_editor_version() -> int:
 # Keywords that signal debug/analysis intent → inject all scripts + allow plain-text reply
 _DEBUG_KEYWORDS = ui_view_models.DEBUG_KEYWORDS
 
-# Archicad GDL 错误格式特征
+# Archicad GDL error format pattern
 _ARCHICAD_ERROR_PATTERN = ui_view_models._DEBUG_INTENT_ARCHICAD_ERROR_PATTERN
 
 
@@ -837,7 +837,7 @@ def run_agent_generate(
         )
         proj.save_to_disk()
     except Exception as exc:
-        return f"❌ **错误**: 同步 HSF 项目失败：{exc}"
+        return f"❌ **Error**: Failed to sync HSF project: {exc}"
 
     service = ui_generation_service.GenerationService(
         session_state=st.session_state,
@@ -908,23 +908,23 @@ def _project_service() -> ui_project_service.ProjectService:
             get_bridge_fn=get_bridge,
         ),
         choose_directory_fn=lambda initial_dir=None: ui_local_file_dialog.choose_directory(
-            title="选择 HSF 项目目录",
+            title="Select HSF Project Directory",
             initial_dir=initial_dir,
         ),
         choose_hsf_save_parent_dir_fn=lambda initial_dir=None: ui_local_file_dialog.choose_directory(
-            title="选择 HSF 保存位置",
+            title="Select HSF Save Location",
             initial_dir=initial_dir,
         ),
         choose_output_directory_fn=lambda initial_dir=None: ui_local_file_dialog.choose_directory(
-            title="选择 GSM 输出文件夹（取消使用默认输出目录）",
+            title="Select GSM Output Folder (cancel to use default output directory)",
             initial_dir=initial_dir,
         ),
         choose_file_fn=lambda initial_dir=None: ui_local_file_dialog.choose_file(
-            title="打开 GDL / GSM 文件",
+            title="Open GDL / GSM File",
             initial_dir=initial_dir,
         ),
         choose_path_fn=lambda initial_dir=None: ui_local_file_dialog.choose_path(
-            title="打开 GDL / GSM 文件",
+            title="Open GDL / GSM File",
             initial_dir=initial_dir,
         ),
     )
@@ -1347,7 +1347,7 @@ with col_mid:
             render_preview_3d_fn=_render_preview_3d,
         )
         st.divider()
-        workbench_tab_script, workbench_tab_params = st.tabs(["脚本编辑", "对象参数"])
+        workbench_tab_script, workbench_tab_params = st.tabs(["Script Editor", "Object Parameters"])
         with workbench_tab_script:
             ui_editor_panel.render_script_editor_panel(
                 st,
@@ -1385,7 +1385,7 @@ with col_right:
             create_project_fn=lambda name: HSFProject.create_new(name, work_dir=st.session_state.work_dir),
             validate_chat_image_size_fn=_validate_chat_image_size,
         )
-    # 聊天编排下沉到 controller，app 只负责把依赖接进去
+    # Chat orchestration is delegated to the controller; app only wires up dependencies
     ui_chat_controller.process_chat_turn(
         st=st,
         session_state=st.session_state,

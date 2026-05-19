@@ -69,9 +69,9 @@ def resolve_image_route_mode(
     vision_name: str,
     detect_image_task_mode_fn: Callable[[str, str], str],
 ) -> str:
-    if route_pick == "强制调试":
+    if route_pick == "Force Debug":
         return "debug"
-    if route_pick == "强制生成":
+    if route_pick == "Force Generate":
         return "generate"
     if active_debug_mode:
         return "debug"
@@ -79,5 +79,5 @@ def resolve_image_route_mode(
 
 
 def build_image_user_display(vision_name: str, route_mode: str, joined_text: str) -> str:
-    route_tag = "🧩 Debug" if route_mode == "debug" else "🧱 生成"
+    route_tag = "🧩 Debug" if route_mode == "debug" else "🧱 Generate"
     return f"🖼️ `{vision_name}` · {route_tag}" + (f"  \n{joined_text}" if joined_text else "")

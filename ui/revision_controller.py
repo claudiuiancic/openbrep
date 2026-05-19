@@ -28,13 +28,13 @@ def save_current_project_revision(
     gsm_name: str | None = None,
 ) -> tuple[bool, str]:
     if proj is None:
-        return False, "❌ 当前没有项目"
+        return False, "❌ No active project"
     try:
         proj.save_to_disk()
         revision = create_revision(proj.root, message.strip(), gsm_name=gsm_name or proj.name)
-        return True, f"✅ 已保存版本 `{revision.revision_id}`（{revision.gsm_name}）"
+        return True, f"✅ Version saved: `{revision.revision_id}` ({revision.gsm_name})"
     except Exception as exc:
-        return False, f"❌ 保存版本失败：{exc}"
+        return False, f"❌ Failed to save version: {exc}"
 
 
 def restore_project_revision(
@@ -48,10 +48,10 @@ def restore_project_revision(
     message: str | None = None,
 ) -> tuple[bool, str]:
     if proj is None:
-        return False, "❌ 当前没有项目"
+        return False, "❌ No active project"
     revision_id = (revision_id or "").strip()
     if not revision_id:
-        return False, "❌ 请选择要恢复的版本"
+        return False, "❌ Please select a version to restore"
 
     try:
         restored = restore_revision(proj.root, revision_id, message)
@@ -70,6 +70,6 @@ def restore_project_revision(
         clear_pending_preview_state(session_state)
         reset_tapir_p0_state_fn()
         bump_main_editor_version_fn()
-        return True, f"✅ 已恢复 `{revision_id}`，当前最新版本为 `{restored.revision_id}`"
+        return True, f"✅ Restored `{revision_id}` — current latest version is `{restored.revision_id}`"
     except Exception as exc:
-        return False, f"❌ 恢复版本失败：{exc}"
+        return False, f"❌ Failed to restore version: {exc}"

@@ -34,14 +34,14 @@ def copy_text_to_system_clipboard(
 ) -> tuple[bool, str]:
     payload = (text or "").strip()
     if not payload:
-        return False, "当前消息无可复制内容"
+        return False, "No copyable content in this message"
 
     platform_name = platform if platform is not None else sys.platform
     run = run_fn or subprocess.run
     try:
         if platform_name == "darwin":
             run(["pbcopy"], input=payload, text=True, check=True, timeout=2)
-            return True, "已复制本条回复"
+            return True, "Reply copied"
         if platform_name.startswith("linux"):
             run(
                 ["xclip", "-selection", "clipboard"],
@@ -50,10 +50,10 @@ def copy_text_to_system_clipboard(
                 check=True,
                 timeout=2,
             )
-            return True, "已复制本条回复"
+            return True, "Reply copied"
         if platform_name.startswith("win"):
             run(["clip"], input=payload, text=True, check=True, timeout=2)
-            return True, "已复制本条回复"
-        return False, "当前系统暂不支持自动复制"
+            return True, "Reply copied"
+        return False, "Auto-copy is not supported on this platform"
     except Exception:
-        return False, "复制失败，请重试"
+        return False, "Copy failed, please try again"

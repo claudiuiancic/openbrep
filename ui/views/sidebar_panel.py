@@ -41,8 +41,8 @@ def render_sidebar(
         st.session_state.assistant_settings = config_defaults.get("assistant_settings", "")
     st.markdown('<p class="main-header">OpenBrep</p>', unsafe_allow_html=True)
     st.markdown(
-        '<p class="intro-header">面向 ArchiCAD 高阶用户和 GDL 开发者的 AI 工作台。'
-        "编译验证、知识驱动、资产可追溯。</p>",
+        '<p class="intro-header">An AI workbench for advanced ArchiCAD users and GDL developers. '
+        "Compilation validation, knowledge-driven, traceable assets.</p>",
         unsafe_allow_html=True,
     )
     st.markdown(
@@ -113,7 +113,7 @@ def render_sidebar(
 
 
 def _render_work_dir(st, *, is_generation_locked_fn: Callable[[object], bool]) -> str:
-    st.subheader("📁 工作目录")
+    st.subheader("📁 Work Directory")
     work_dir = st.text_input(
         "Work Directory",
         value=st.session_state.work_dir,
@@ -150,33 +150,33 @@ def _render_pro_section(
             st.session_state.pro_unlocked = False
         st.session_state.pro_license_loaded = True
 
-    st.subheader("🔐 Pro 授权（V1）")
+    st.subheader("🔐 Pro License (V1)")
     if st.session_state.pro_unlocked:
-        st.success("Pro 已解锁")
+        st.success("Pro unlocked")
     else:
-        st.caption("当前：Free 模式（仅基础知识库）")
+        st.caption("Current: Free mode (basic knowledge base only)")
 
-    pro_code_input = st.text_input("授权码", type="password", key="pro_code_input")
+    pro_code_input = st.text_input("License Code", type="password", key="pro_code_input")
     c1, c2 = st.columns(2)
     with c1:
-        if st.button("解锁 Pro", width="stretch"):
+        if st.button("Unlock Pro", width="stretch"):
             ok, msg, record = verify_pro_code_fn(pro_code_input)
             if ok and record is not None:
                 st.session_state.pro_unlocked = True
                 save_license_fn(work_dir, record)
-                st.success("✅ Pro 解锁成功")
+                st.success("✅ Pro unlocked successfully")
                 st.rerun()
             else:
                 st.error(msg)
     with c2:
-        if st.button("锁回 Free", width="stretch"):
+        if st.button("Revert to Free", width="stretch"):
             st.session_state.pro_unlocked = False
             save_license_fn(work_dir, empty_license_record_fn())
-            st.info("已切回 Free 模式")
+            st.info("Switched back to Free mode")
             st.rerun()
 
     if st.session_state.pro_unlocked:
-        pro_pkg = st.file_uploader("导入 Pro 知识包（.zip/.obrk）", type=["zip", "obrk"], key="pro_pkg_uploader")
+        pro_pkg = st.file_uploader("Import Pro Knowledge Package (.zip/.obrk)", type=["zip", "obrk"], key="pro_pkg_uploader")
         if pro_pkg is not None:
             ok, msg = import_pro_knowledge_zip_fn(pro_pkg.read(), pro_pkg.name, work_dir)
             if ok:
@@ -184,24 +184,24 @@ def _render_pro_section(
             else:
                 st.error(msg)
     else:
-        st.caption("请先输入有效授权码并解锁后再导入知识包。")
+        st.caption("Please enter a valid license code and unlock Pro before importing a knowledge package.")
 
 
 def _render_compiler_section(st, *, config_defaults: dict, normalize_converter_path_fn: Callable[[str], str]) -> tuple[str, str]:
-    st.subheader("🔧 编译器 / Compiler")
+    st.subheader("🔧 Compiler")
     compiler_mode = st.radio(
-        "编译模式",
-        ["Mock (无需 ArchiCAD)", "LP_XMLConverter (真实编译)"],
+        "Compiler Mode",
+        ["Mock (no ArchiCAD required)", "LP_XMLConverter (real compilation)"],
         index=1 if config_defaults.get("compiler_path") else 0,
     )
 
     converter_path = ""
     if compiler_mode.startswith("LP"):
         raw_path = st.text_input(
-            "LP_XMLConverter 路径",
+            "LP_XMLConverter Path",
             value=config_defaults.get("compiler_path", ""),
             placeholder="/Applications/GRAPHISOFT/ArchiCAD 28/LP_XMLConverter.app/Contents/MacOS/LP_XMLConverter",
-            help="macOS/Linux 用正斜杠 /，Windows 用反斜杠 粘贴后自动转换",
+            help="macOS/Linux: use forward slashes /; Windows: use backslashes. Auto-converted after pasting.",
         )
         converter_path = normalize_converter_path_fn(raw_path)
     return compiler_mode, converter_path
@@ -223,17 +223,17 @@ def _render_llm_section(
     key_for_model_fn: Callable[[str], str],
     collect_custom_model_aliases_fn: Callable[[list[dict]], list[str]],
 ) -> dict:
-    st.subheader("🧠 AI 模型 / LLM")
+    st.subheader("🧠 AI Model / LLM")
     reload_col, status_col = st.columns([1, 2])
     with reload_col:
-        if st.button("重新加载配置", width="stretch", disabled=is_generation_locked_fn(st.session_state)):
+        if st.button("Reload Config", width="stretch", disabled=is_generation_locked_fn(st.session_state)):
             try:
                 reload_config_globals_fn(update_session_state=True)
                 st.session_state["current_model"] = config_defaults.get("llm_model", "")
-                st.session_state["reload_config_notice"] = "✅ 已从磁盘重新加载 config.toml"
+                st.session_state["reload_config_notice"] = "✅ Reloaded config.toml from disk"
                 st.rerun()
             except Exception as exc:
-                st.warning(f"配置重载失败：{exc}")
+                st.warning(f"Config reload failed: {exc}")
     with status_col:
         reload_notice = st.session_state.pop("reload_config_notice", "")
         if reload_notice:
@@ -250,18 +250,18 @@ def _render_llm_section(
     default_source = model_state["default_source"]
     default_source_index = source_options.index(default_source) if default_source in source_options else 0
     selected_source = st.selectbox(
-        "来源 / Source",
+        "Source",
         source_options,
         index=default_source_index,
         disabled=is_generation_locked_fn(st.session_state),
     )
 
-    active_options = model_state["custom_options"] if selected_source == "自定义" else model_state["builtin_options"]
+    active_options = model_state["custom_options"] if selected_source == "Custom" else model_state["builtin_options"]
     model_labels = [opt["label"] for opt in active_options]
     default_label = model_state["default_model_label"] if selected_source == default_source else ""
     default_model_index = model_labels.index(default_label) if default_label in model_labels else 0
     selected_label = st.selectbox(
-        "模型 / Model",
+        "Model",
         model_labels,
         index=default_model_index,
         disabled=is_generation_locked_fn(st.session_state),
@@ -281,14 +281,14 @@ def _render_llm_section(
 
     is_custom = model_name in collect_custom_model_aliases_fn(custom_list)
     if is_custom:
-        st.info("此模型使用自定义代理，请在 config.toml 的 [[llm.custom_providers]] 中配置 api_key 和 base_url")
+        st.info("This model uses a custom provider. Configure api_key and base_url in the [[llm.custom_providers]] section of config.toml.")
         api_key = st.session_state.model_api_keys.get(model_name, "")
     else:
         api_key = st.text_input(
             "API Key",
             value=st.session_state.model_api_keys.get(model_name, ""),
             type="password",
-            help="Ollama 本地模式不需要 Key",
+            help="Ollama local mode does not require a key.",
             disabled=is_generation_locked_fn(st.session_state),
         )
     _persist_api_key(st, model_name=model_name, api_key=api_key)
@@ -300,7 +300,7 @@ def _render_llm_section(
         iter_custom_provider_model_entries_fn=iter_custom_provider_model_entries_fn,
     )
     api_base = st.text_input("API Base URL", value=default_api_base) if default_api_base else ""
-    max_retries = st.slider("最大重试次数", 1, 10, 5)
+    max_retries = st.slider("Max Retries", 1, 10, 5)
     return {
         "model_name": model_name,
         "api_key": api_key,
@@ -324,7 +324,7 @@ def _persist_model_choice(
             save_cfg_model.save()
         config_defaults["llm_model"] = model_name
     except Exception as exc:
-        st.sidebar.warning(f"配置保存失败：{exc}")
+        st.sidebar.warning(f"Failed to save config: {exc}")
 
 
 def _persist_api_key(st, *, model_name: str, api_key: str) -> None:
@@ -338,7 +338,7 @@ def _persist_api_key(st, *, model_name: str, api_key: str) -> None:
             save_cfg.llm.provider_keys[provider] = api_key
         save_cfg.save()
     except Exception as exc:
-        st.sidebar.warning(f"配置保存失败：{exc}")
+        st.sidebar.warning(f"Failed to save config: {exc}")
 
 
 def _persist_converter_path(st, *, converter_path: str, config_defaults: dict) -> None:
@@ -350,23 +350,23 @@ def _persist_converter_path(st, *, converter_path: str, config_defaults: dict) -
         save_cfg.save()
         config_defaults["compiler_path"] = converter_path
     except Exception as exc:
-        st.sidebar.warning(f"配置保存失败：{exc}")
+        st.sidebar.warning(f"Failed to save config: {exc}")
 
 
 def _render_provider_key_hint(st, model_name: str) -> None:
     if "claude" in model_name:
-        st.caption("🔑 [获取 Claude API Key →](https://console.anthropic.com/settings/keys)")
-        st.caption("⚠️ API Key 需单独充值，与 Claude Pro 订阅额度无关")
+        st.caption("🔑 [Get Claude API Key →](https://console.anthropic.com/settings/keys)")
+        st.caption("⚠️ API Key requires a separate top-up and is unrelated to Claude Pro subscription credits.")
     elif "glm" in model_name:
-        st.caption("🔑 [获取智谱 API Key →](https://bigmodel.cn/usercenter/apikeys)")
+        st.caption("🔑 [Get ZhipuAI API Key →](https://bigmodel.cn/usercenter/apikeys)")
     elif "gpt" in model_name or "o3" in model_name:
-        st.caption("🔑 [获取 OpenAI API Key →](https://platform.openai.com/api-keys)")
+        st.caption("🔑 [Get OpenAI API Key →](https://platform.openai.com/api-keys)")
     elif "deepseek" in model_name and "ollama" not in model_name:
-        st.caption("🔑 [获取 DeepSeek API Key →](https://platform.deepseek.com/api_keys)")
+        st.caption("🔑 [Get DeepSeek API Key →](https://platform.deepseek.com/api_keys)")
     elif "gemini" in model_name:
-        st.caption("🔑 [获取 Gemini API Key →](https://aistudio.google.com/apikey)")
+        st.caption("🔑 [Get Gemini API Key →](https://aistudio.google.com/apikey)")
     elif "ollama" in model_name:
-        st.caption("🖥️ 本地运行，无需 Key。确保 Ollama 已启动。")
+        st.caption("🖥️ Running locally — no key required. Make sure Ollama is started.")
 
 
 def _get_default_api_base(
@@ -394,13 +394,13 @@ def _render_assistant_settings(
     config_defaults: dict,
     should_persist_assistant_settings_fn: Callable[[str, str], bool],
 ) -> None:
-    st.subheader("AI助手设置")
+    st.subheader("AI Assistant Settings")
     assistant_settings = st.text_area(
-        "长期协作偏好",
+        "Long-term Collaboration Preferences",
         value=st.session_state.assistant_settings,
         height=140,
-        placeholder="例如：我是 GDL 初学者，请先解释再给最小修改；我主要改已有对象；赶项目时优先给可运行结果。",
-        help="长期保存。可填写你的 GDL 经验、当前使用场景、沟通方式偏好与修改边界。修改后立即影响后续聊天与生成。",
+        placeholder="e.g. I am a GDL beginner — please explain before giving minimal changes; I mainly modify existing objects; when under deadline, prioritize working results.",
+        help="Saved persistently. Describe your GDL experience, current use case, communication style preferences, and modification boundaries. Changes take effect immediately for subsequent chats and generation.",
         disabled=st.session_state.get("generation_status") in {"running", "cancelling"},
     )
     if should_persist_assistant_settings_fn(config_defaults.get("assistant_settings", ""), assistant_settings):
@@ -411,7 +411,7 @@ def _render_assistant_settings(
             save_cfg.save()
             config_defaults["assistant_settings"] = assistant_settings
         except Exception as exc:
-            st.sidebar.warning(f"配置保存失败：{exc}")
+            st.sidebar.warning(f"Failed to save config: {exc}")
     else:
         st.session_state.assistant_settings = assistant_settings
 
@@ -425,7 +425,7 @@ def _render_project_reset(
 ) -> None:
     if not st.session_state.project:
         return
-    if not st.button("🗑️ 清除项目", width="stretch", disabled=is_generation_locked_fn(st.session_state)):
+    if not st.button("🗑️ Clear Project", width="stretch", disabled=is_generation_locked_fn(st.session_state)):
         return
 
     keep_work_dir = st.session_state.work_dir

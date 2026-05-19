@@ -7,7 +7,7 @@ def check_gdl_script(content: str, script_type: str = "") -> list:
     issues = []
     if not content.strip():
         if script_type == "2d":
-            issues.append("⚠️ 2D 脚本为空，必须至少包含 PROJECT2 3, 270, 2")
+            issues.append("⚠️ 2D script is empty — must contain at least PROJECT2 3, 270, 2")
         return issues
 
     lines = content.splitlines()
@@ -19,20 +19,20 @@ def check_gdl_script(content: str, script_type: str = "") -> list:
     )
     endif_count = sum(1 for line in lines if re.match(r"\s*ENDIF\b", line, re.I))
     if if_multi != endif_count:
-        issues.append(f"⚠️ IF/ENDIF 不匹配：{if_multi} 个多行 IF，{endif_count} 个 ENDIF")
+        issues.append(f"⚠️ IF/ENDIF mismatch: {if_multi} multi-line IF(s), {endif_count} ENDIF(s)")
 
     for_count = sum(1 for line in lines if re.match(r"\s*FOR\b", line, re.I))
     next_count = sum(1 for line in lines if re.match(r"\s*NEXT\b", line, re.I))
     if for_count != next_count:
-        issues.append(f"⚠️ FOR/NEXT 不匹配：{for_count} 个 FOR，{next_count} 个 NEXT")
+        issues.append(f"⚠️ FOR/NEXT mismatch: {for_count} FOR(s), {next_count} NEXT(s)")
 
     add_count = sum(1 for line in lines if re.match(r"\s*ADD(X|Y|Z)?\b", line, re.I))
     del_count = sum(1 for line in lines if re.match(r"\s*DEL\b", line, re.I))
     if add_count != del_count:
-        issues.append(f"⚠️ ADD/DEL 不匹配：{add_count} 个 ADD/ADDX/ADDY/ADDZ，{del_count} 个 DEL")
+        issues.append(f"⚠️ ADD/DEL mismatch: {add_count} ADD/ADDX/ADDY/ADDZ, {del_count} DEL(s)")
 
     if any(line.strip().startswith("```") for line in lines):
-        issues.append("⚠️ 脚本含有 ``` 标记 — AI 格式化残留，请删除所有反引号行")
+        issues.append("⚠️ Script contains ``` markers — AI formatting artifact; please remove all backtick lines")
 
     if script_type == "3d":
         _check_3d_termination(lines, issues)
@@ -43,19 +43,19 @@ def check_gdl_script(content: str, script_type: str = "") -> list:
             for line in lines
         )
         if not has_proj:
-            issues.append("⚠️ 2D 脚本缺少平面投影语句（PROJECT2 / RECT2）")
+            issues.append("⚠️ 2D script is missing a floor-plan projection statement (PROJECT2 / RECT2)")
 
     assigned = set(re.findall(r"\b(_[A-Za-z]\w*)\s*=", content))
     used = set(re.findall(r"\b(_[A-Za-z]\w*)\b", content))
     undefined = used - assigned
     if undefined:
         issues.append(
-            f"ℹ️ 变量 {', '.join(sorted(undefined))} 在本脚本未赋值 — "
-            "若已在 Master 脚本中定义可忽略，否则会导致 ArchiCAD 运行时不显示"
+            f"ℹ️ Variable(s) {', '.join(sorted(undefined))} are not assigned in this script — "
+            "safe to ignore if defined in the Master script, otherwise ArchiCAD may not render the object at runtime"
         )
 
     if not issues:
-        issues = ["✅ 检查通过"]
+        issues = ["✅ Checks passed"]
     return issues
 
 
@@ -66,7 +66,7 @@ def _check_3d_termination(lines: list[str], issues: list[str]) -> None:
     if not has_subs:
         last_non_empty = next((line.strip() for line in reversed(lines) if line.strip()), "")
         if not re.match(r"^END\s*$", last_non_empty, re.I):
-            issues.append("⚠️ 3D 脚本最后一行必须是 END")
+            issues.append("⚠️ The last line of the 3D script must be END")
         return
 
     main_body = []
@@ -76,7 +76,7 @@ def _check_3d_termination(lines: list[str], issues: list[str]) -> None:
         main_body.append(line)
     last_main = next((line.strip() for line in reversed(main_body) if line.strip()), "")
     if not re.match(r"^END\s*$", last_main, re.I):
-        issues.append("⚠️ 3D 主体部分（第一个子程序之前）最后一行必须是 END")
+        issues.append("⚠️ The last line of the 3D main body (before the first subroutine) must be END")
 
     current_sub = None
     sub_lines: list[str] = []
@@ -85,7 +85,7 @@ def _check_3d_termination(lines: list[str], issues: list[str]) -> None:
             if current_sub and sub_lines:
                 last_sub = next((item.strip() for item in reversed(sub_lines) if item.strip()), "")
                 if not re.match(r"^RETURN\s*$", last_sub, re.I):
-                    issues.append(f"⚠️ 子程序 {current_sub} 末尾应为 RETURN，不是 END")
+                    issues.append(f"⚠️ Subroutine {current_sub} should end with RETURN, not END")
             current_sub = line.strip()
             sub_lines = []
         else:
@@ -94,4 +94,4 @@ def _check_3d_termination(lines: list[str], issues: list[str]) -> None:
     if current_sub and sub_lines:
         last_sub = next((item.strip() for item in reversed(sub_lines) if item.strip()), "")
         if not re.match(r"^RETURN\s*$", last_sub, re.I):
-            issues.append(f"⚠️ 子程序 {current_sub} 末尾应为 RETURN")
+            issues.append(f"⚠️ Subroutine {current_sub} should end with RETURN")

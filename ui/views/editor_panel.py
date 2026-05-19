@@ -13,34 +13,34 @@ PROJECT_ACTIVITY_MAX_HEIGHT = 180
 
 SCRIPT_HELP = {
     "scripts/3d.gdl": (
-        "**3D 脚本** — 三维几何体定义，ArchiCAD 3D 窗口中显示的实体。\n\n"
-        "- 使用 `PRISM_`、`BLOCK`、`SPHERE`、`CONE`、`REVOLVE` 等命令建模\n"
-        "- `ADD` / `DEL` 管理坐标系变换，必须成对出现\n"
-        "- `FOR` / `NEXT` 循环用于重复构件（如格栅、层板）\n"
-        "- **最后一行必须是 `END`**，否则编译失败"
+        "**3D Script** — Defines three-dimensional geometry; the solid bodies displayed in ArchiCAD's 3D window.\n\n"
+        "- Use commands such as `PRISM_`, `BLOCK`, `SPHERE`, `CONE`, `REVOLVE` to model geometry\n"
+        "- `ADD` / `DEL` manage coordinate-system transformations and must appear in matched pairs\n"
+        "- `FOR` / `NEXT` loops are used for repeated elements (e.g. gratings, shelves)\n"
+        "- **The last line must be `END`**, otherwise compilation will fail"
     ),
     "scripts/2d.gdl": (
-        "**2D 脚本** — 平面图符号，ArchiCAD 楼层平面图中显示的线条。\n\n"
-        "- **必须包含** `PROJECT2 3, 270, 2`（最简投影）或自定义 2D 线条\n"
-        "- 不写或留空会导致平面图中对象不可见"
+        "**2D Script** — Floor-plan symbols; the lines displayed in ArchiCAD's floor-plan view.\n\n"
+        "- **Must contain** `PROJECT2 3, 270, 2` (minimal projection) or custom 2D linework\n"
+        "- Omitting it or leaving it empty will make the object invisible in floor plans"
     ),
     "scripts/1d.gdl": (
-        "**Master 脚本** — 主控脚本，所有脚本执行前最先运行。\n\n"
-        "- 全局变量初始化、参数联动逻辑\n"
-        "- 简单对象通常不需要此脚本"
+        "**Master Script** — The master control script; runs first before all other scripts.\n\n"
+        "- Global variable initialization, parameter coupling logic\n"
+        "- Simple objects usually do not need this script"
     ),
     "scripts/vl.gdl": (
-        "**Param 脚本** — 参数验证脚本，参数值变化时触发。\n\n"
-        "- 参数范围约束、派生参数计算\n"
-        "- 简单对象通常不需要此脚本"
+        "**Param Script** — Parameter validation script; triggered when parameter values change.\n\n"
+        "- Parameter range constraints, derived parameter calculations\n"
+        "- Simple objects usually do not need this script"
     ),
     "scripts/ui.gdl": (
-        "**UI 脚本** — 自定义参数界面，ArchiCAD 对象设置对话框控件布局。\n\n"
-        "- 不写则 ArchiCAD 自动生成默认参数列表界面"
+        "**UI Script** — Custom parameter interface; defines the control layout in ArchiCAD's Object Settings dialog.\n\n"
+        "- If omitted, ArchiCAD automatically generates a default parameter list interface"
     ),
     "scripts/pr.gdl": (
-        "**Properties 脚本** — BIM 属性输出，定义 IFC 属性集和构件属性。\n\n"
-        "- 不做 BIM 数据输出可留空"
+        "**Properties Script** — BIM attribute output; defines IFC property sets and element attributes.\n\n"
+        "- Can be left empty if no BIM data output is required"
     ),
 }
 
@@ -57,17 +57,17 @@ def render_script_editor_panel(
     fullscreen_editor_dialog_fn: Callable[[object, str, str], None],
     editor_height: int = 420,
 ) -> None:
-    st.markdown("### GDL 脚本编辑")
+    st.markdown("### GDL Script Editor")
     script_tabs = st.tabs([label for _, _, label in script_map])
 
     for tab, (script_type, fpath, label) in zip(script_tabs, script_map):
         with tab:
             help_col, fullscreen_col = st.columns([6, 1])
             with help_col:
-                with st.expander(f"ℹ️ {label} 脚本说明"):
+                with st.expander(f"ℹ️ {label} Script Info"):
                     st.markdown(SCRIPT_HELP.get(fpath, ""))
             with fullscreen_col:
-                if st.button("⛶", key=f"fs_{fpath}_v{editor_version}", help="全屏编辑", width="stretch"):
+                if st.button("⛶", key=f"fs_{fpath}_v{editor_version}", help="Fullscreen edit", width="stretch"):
                     fullscreen_editor_dialog_fn(script_type, fpath, label)
 
             current_code = proj.get_script(script_type) or ""
@@ -124,7 +124,7 @@ def _render_project_activity_log(st) -> None:
         return
 
     st.divider()
-    with st.expander(f"导入 / 加载记录（{len(entries)}）", expanded=False):
+    with st.expander(f"Import / Load Log ({len(entries)})", expanded=False):
         with st.container(height=PROJECT_ACTIVITY_MAX_HEIGHT, border=True):
             for idx, entry in enumerate(reversed(entries)):
                 timestamp = str(entry.get("timestamp", "")).strip()

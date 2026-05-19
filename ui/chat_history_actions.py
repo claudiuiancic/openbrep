@@ -41,7 +41,7 @@ def chat_record_summary(message: dict, max_len: int = 52) -> str:
         text = str((message or {}).get("content") or "").strip()
     text = re.sub(r"\s+", " ", text).strip()
     if len(text) <= max_len:
-        return text or "(空记录)"
+        return text or "(empty record)"
     return text[: max_len - 1].rstrip() + "…"
 
 
@@ -89,7 +89,7 @@ def build_chat_record_entries(
     entries: list[dict] = []
     for idx, message in enumerate(history or []):
         role = message.get("role", "assistant")
-        role_label = "用户" if role == "user" else "助手"
+        role_label = "User" if role == "user" else "Assistant"
         content = str(message.get("content") or "")
         has_code = "```" in content
         if classify_code_blocks_fn is not None:
@@ -156,7 +156,7 @@ def delete_chat_record_entry(
 ) -> tuple[bool, str]:
     history = list(session_state.get("chat_record_history") or [])
     if not (0 <= index < len(history)):
-        return False, "聊天记录不存在或已被删除"
+        return False, "Chat record does not exist or has already been deleted"
 
     remaining = history[:index] + history[index + 1:]
     session_state.chat_record_history = remaining
@@ -164,7 +164,7 @@ def delete_chat_record_entry(
 
     workspace = str(work_dir or "").strip()
     if not workspace:
-        return True, "已从当前列表删除"
+        return True, "Removed from the current list"
 
     project = session_state.get("project")
     project_name = getattr(project, "name", "") if project is not None else ""
@@ -176,5 +176,5 @@ def delete_chat_record_entry(
         )
         session_state.chat_record_history_loaded_work_dir = workspace
     except Exception as exc:
-        return False, f"删除记录失败：{exc}"
-    return True, "已删除聊天记录"
+        return False, f"Failed to delete record: {exc}"
+    return True, "Chat record deleted"

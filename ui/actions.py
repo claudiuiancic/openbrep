@@ -31,7 +31,7 @@ def apply_generation_plan(
     script_map = {block["path"]: block["content"] for block in plan.code_blocks}
     if plan.mode == "auto_apply":
         if not already_applied:
-            capture_last_project_snapshot("AI 自动写入")
+            capture_last_project_snapshot("AI auto-write")
             apply_scripts_to_project(proj, script_map)
         bump_main_editor_version()
         proj.save_to_disk()

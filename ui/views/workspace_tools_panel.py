@@ -27,10 +27,10 @@ def render_preview_workbench(
     render_preview_2d_fn: Callable[[object], None],
     render_preview_3d_fn: Callable[[object], None],
 ) -> None:
-    st.markdown("### 预览")
+    st.markdown("### Preview")
     preview_2d, preview_3d = st.columns(2)
     with preview_2d:
-        if st.button("👁️ 预览 2D", width="stretch", help="运行 2D 子集解释并显示图形"):
+        if st.button("👁️ Preview 2D", width="stretch", help="Run 2D subset interpreter and display the result"):
             close_chat_record_browser(st.session_state)
             ok, msg = run_preview_fn(proj, "2d")
             if ok:
@@ -39,7 +39,7 @@ def render_preview_workbench(
                 st.error(msg)
 
     with preview_3d:
-        if st.button("🧊 预览 3D", width="stretch", help="运行 3D 子集解释并显示图形"):
+        if st.button("🧊 Preview 3D", width="stretch", help="Run 3D subset interpreter and display the result"):
             close_chat_record_browser(st.session_state)
             ok, msg = run_preview_fn(proj, "3d")
             if ok:
@@ -52,54 +52,54 @@ def render_preview_workbench(
 
 def _render_tapir_controls(st, *, tapir_import_ok: bool, get_bridge_fn: Callable[[], object]) -> None:
     st.divider()
-    st.markdown("#### Archicad 实机联动")
+    st.markdown("#### Archicad Live Link")
     if not tapir_import_ok:
-        st.caption("未安装 Tapir Python 依赖，实机联动不可用。")
+        st.caption("Tapir Python dependency not installed; live link is unavailable.")
         return
 
     bridge = get_bridge_fn()
     tapir_ok = bridge.is_available()
     if not tapir_ok:
-        st.caption("⚪ Archicad 未运行或 Tapir 未安装，跳过实时测试")
+        st.caption("⚪ Archicad is not running or Tapir is not installed; skipping live test")
         return
 
     ac_col1, ac_col2 = st.columns([2, 3])
     with ac_col1:
         if st.button(
-            "🏗️ 在 Archicad 中测试",
+            "🏗️ Test in Archicad",
             width="stretch",
-            help="触发 Archicad 重新加载库，捕获 GDL 运行期错误回传到 chat",
+            help="Trigger Archicad to reload the library and capture GDL runtime errors back into chat",
         ):
             st.session_state.tapir_test_trigger = True
             st.rerun()
     with ac_col2:
-        st.caption("✅ Archicad + Tapir 已连接")
+        st.caption("✅ Archicad + Tapir connected")
 
     p0_b1, p0_b2, p0_b3, p0_b4 = st.columns(4)
     with p0_b1:
-        if st.button("读取选中", width="stretch", help="同步 Archicad 当前选中的库对象"):
+        if st.button("Read Selection", width="stretch", help="Sync the currently selected library object from Archicad"):
             st.session_state.tapir_selection_trigger = True
             st.rerun()
     with p0_b2:
-        if st.button("高亮对象", width="stretch", help="在 Archicad 中高亮当前对象"):
+        if st.button("Highlight Object", width="stretch", help="Highlight the current object in Archicad"):
             st.session_state.tapir_highlight_trigger = True
             st.rerun()
     with p0_b3:
-        if st.button("读参数", width="stretch", help="从 Archicad 读取当前对象参数"):
+        if st.button("Read Params", width="stretch", help="Read current object parameters from Archicad"):
             st.session_state.tapir_load_params_trigger = True
             st.rerun()
     with p0_b4:
         can_apply = bool(st.session_state.get("tapir_selected_params"))
-        if st.button("写参数", width="stretch", disabled=not can_apply, help="把参数工作台中的值写回 Archicad"):
+        if st.button("Write Params", width="stretch", disabled=not can_apply, help="Write the values from the parameter workbench back to Archicad"):
             st.session_state.tapir_apply_params_trigger = True
             st.rerun()
 
 
 def _render_project_action_buttons(st, proj: HSFProject) -> None:
     if st.button(
-        "🧠 整理错题本",
+        "🧠 Consolidate Error Notes",
         width="stretch",
-        help="把当前工作区错题记录整理成后续生成会注入的自我提示",
+        help="Consolidate the current workspace error notes into a self-hint that will be injected into future generation runs",
     ):
         result = ErrorLearningStore(st.session_state.work_dir).summarize_to_skill(
             project_name=proj.name,
@@ -113,35 +113,35 @@ def _render_project_action_buttons(st, proj: HSFProject) -> None:
 
 def _render_memory_privacy_panel(st) -> None:
     st.divider()
-    st.markdown("#### 记忆与隐私")
+    st.markdown("#### Memory & Privacy")
 
     store = ErrorLearningStore(st.session_state.work_dir)
     status = store.memory_status()
     st.caption(
-        "OpenBrep 会把聊天记录、错题本和整理后的 Skill 保存在当前工作区，"
-        "用于后续生成时避开已发生过的问题。"
+        "OpenBrep saves chat records, error notes, and consolidated Skills in the current workspace "
+        "to help avoid previously encountered issues in future generation runs."
     )
-    st.caption(f"保存位置：`{status.memory_root}`")
+    st.caption(f"Storage location: `{status.memory_root}`")
 
     metric_1, metric_2, metric_3 = st.columns(3)
-    metric_1.metric("聊天", status.chat_count)
-    metric_2.metric("错题", status.lesson_count)
-    metric_3.metric("Skill", "已生成" if status.has_learned_skill else "未生成")
+    metric_1.metric("Chats", status.chat_count)
+    metric_2.metric("Error Notes", status.lesson_count)
+    metric_3.metric("Skill", "Generated" if status.has_learned_skill else "Not generated")
 
     if st.session_state.get("confirm_clear_memory"):
-        st.warning("确认清除当前工作区记忆？HSF 项目、编译产物和版本快照不会删除。")
+        st.warning("Confirm clearing the current workspace memory? HSF projects, compiled outputs, and version snapshots will not be deleted.")
         ok_col, cancel_col, _ = st.columns([1, 1, 3])
         with ok_col:
-            if st.button("确认清除记忆", type="primary", key="clear_memory_confirm_button"):
+            if st.button("Confirm Clear Memory", type="primary", key="clear_memory_confirm_button"):
                 before = store.clear_memory()
                 st.session_state.confirm_clear_memory = False
                 st.toast(
-                    f"已清除记忆：聊天 {before.chat_count} 条，错题 {before.lesson_count} 条",
+                    f"Memory cleared: {before.chat_count} chats, {before.lesson_count} error notes",
                     icon="✅",
                 )
                 st.rerun()
         with cancel_col:
-            if st.button("取消", key="clear_memory_cancel_button"):
+            if st.button("Cancel", key="clear_memory_cancel_button"):
                 st.session_state.confirm_clear_memory = False
                 st.rerun()
         return
@@ -153,10 +153,10 @@ def _render_memory_privacy_panel(st) -> None:
         and status.total_bytes == 0
     )
     if st.button(
-        "清除工作区记忆",
+        "Clear Workspace Memory",
         width="stretch",
         disabled=disabled,
-        help="删除当前工作区的持久化聊天、错题本和整理后的 Skill，不影响项目源文件。",
+        help="Delete persistent chats, error notes, and consolidated Skills in the current workspace without affecting project source files.",
     ):
         st.session_state.confirm_clear_memory = True
         st.rerun()
@@ -171,7 +171,7 @@ def _render_preview_panel(
     preview_meta = st.session_state.get("preview_meta") or {}
     preview_kind = preview_meta.get("kind", "")
     preview_time = preview_meta.get("timestamp", "")
-    title = f"最新预览：{preview_kind} · {preview_time}" if preview_kind else "预览面板（2D / 3D）"
+    title = f"Latest Preview: {preview_kind} · {preview_time}" if preview_kind else "Preview Panel (2D / 3D)"
     has_preview = bool(
         st.session_state.get("preview_2d_data")
         or st.session_state.get("preview_3d_data")
@@ -194,7 +194,7 @@ def _render_preview_panel(
 def _render_preview_warnings(st) -> None:
     warnings = st.session_state.get("preview_warnings") or []
     if not warnings:
-        st.caption("暂无 warning。")
+        st.caption("No warnings.")
         return
 
     for warning in warnings:

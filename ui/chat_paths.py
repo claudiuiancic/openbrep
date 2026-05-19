@@ -6,9 +6,9 @@ from ui.chat_render import render_assistant_block, render_user_bubble
 from ui.generation_service import FORCE_GENERATE_PREFIX
 
 
-CHAT_ROUTE_AUTO = "自动"
-CHAT_ROUTE_FORCE_GENERATE = "强制生成"
-CHAT_ROUTE_FORCE_DEBUG = "强制调试"
+CHAT_ROUTE_AUTO = "Auto"
+CHAT_ROUTE_FORCE_GENERATE = "Force Generate"
+CHAT_ROUTE_FORCE_DEBUG = "Force Debug"
 
 
 def run_normal_text_path(
@@ -41,7 +41,7 @@ def run_normal_text_path(
     route_pick = _chat_route_mode(session_state)
 
     if not api_key and "ollama" not in model_name:
-        err = "❌ 请在左侧边栏填入 API Key 后再试。"
+        err = "❌ Please enter an API Key in the left sidebar before trying again."
         session_state.chat_history.append({"role": "assistant", "content": err})
         return True, True, None
 
@@ -104,7 +104,7 @@ def run_normal_text_path(
                             session_state.project = new_proj
                             session_state.pending_gsm_name = gdl_obj_name
                             session_state.script_revision = 0
-                            info_fn(f"📁 已初始化项目 `{gdl_obj_name}`")
+                            info_fn(f"📁 Project initialized: `{gdl_obj_name}`")
 
                         proj_current = session_state.project
                         effective_gsm = session_state.pending_gsm_name or proj_current.name
@@ -171,7 +171,7 @@ def run_vision_path(
     })
 
     if not api_key and "ollama" not in model_name:
-        err = "❌ 请在左侧边栏填入 API Key 后再试。"
+        err = "❌ Please enter an API Key in the left sidebar before trying again."
         session_state.chat_history.append({"role": "assistant", "content": err})
         return True, True, None
 
@@ -201,7 +201,7 @@ def run_vision_path(
                     True,
                 )
             else:
-                debug_req = joined_text or "请根据这张截图定位并修复当前项目中的问题。"
+                debug_req = joined_text or "Please use this screenshot to locate and fix issues in the current project."
                 if not debug_req.startswith("[DEBUG:"):
                     debug_req = f"[DEBUG:editor] {debug_req}"
                 msg = run_agent_generate_with_debug_image_fn(

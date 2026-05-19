@@ -5,7 +5,7 @@ import subprocess
 from pathlib import Path
 
 
-def choose_file(*, title: str = "打开 GDL / GSM 文件", initial_dir: str | None = None) -> str | None:
+def choose_file(*, title: str = "Open GDL / GSM File", initial_dir: str | None = None) -> str | None:
     """
     Open a native file chooser for local Streamlit sessions.
 
@@ -17,12 +17,12 @@ def choose_file(*, title: str = "打开 GDL / GSM 文件", initial_dir: str | No
     return _choose_file_tk(title=title, initial_dir=initial_dir)
 
 
-def choose_path(*, title: str = "打开 GDL / GSM 文件", initial_dir: str | None = None) -> str | None:
+def choose_path(*, title: str = "Open GDL / GSM File", initial_dir: str | None = None) -> str | None:
     """Compatibility wrapper for older callers that opened project source files."""
     return choose_file(title=title, initial_dir=initial_dir)
 
 
-def choose_directory(*, title: str = "选择 HSF 项目目录", initial_dir: str | None = None) -> str | None:
+def choose_directory(*, title: str = "Select HSF Project Directory", initial_dir: str | None = None) -> str | None:
     """
     Open a native directory chooser for local Streamlit sessions.
 

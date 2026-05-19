@@ -31,14 +31,14 @@ def _existing_hsf_root(proj) -> Path | None:
 def _format_compile_result(*, result, output_gsm: str, compiler_mode: str, hsf_dir: str | Path | None = None) -> tuple[bool, str]:
     mock_tag = " [Mock]" if compiler_mode.startswith("Mock") else ""
     if result.success:
-        msg = f"✅ **编译成功{mock_tag}**\n\n📦 GSM: `{output_gsm}`"
+        msg = f"✅ **Compile successful{mock_tag}**\n\n📦 GSM: `{output_gsm}`"
         if hsf_dir:
-            msg += f"\n\n📁 HSF 源目录: `{hsf_dir}`"
+            msg += f"\n\n📁 HSF source directory: `{hsf_dir}`"
         if compiler_mode.startswith("Mock"):
-            msg += "\n\n⚠️ Mock 模式不生成真实 .gsm，切换 LP_XMLConverter 进行真实编译。"
+            msg += "\n\n⚠️ Mock mode does not produce a real .gsm; switch to LP_XMLConverter for real compilation."
         return True, msg
 
-    return False, f"❌ **编译失败**\n\n```\n{result.stderr[:500]}\n```"
+    return False, f"❌ **Compile failed**\n\n```\n{result.stderr[:500]}\n```"
 
 
 def _max_existing_gsm_revision_in_dir(proj_name: str, output_dir: str | Path) -> int:
@@ -83,27 +83,27 @@ def save_project_to_hsf_dir(
     source_root: str | Path | None = None,
 ) -> tuple[bool, str, Path | None]:
     if proj is None:
-        return False, "❌ 当前没有可保存的项目", None
+        return False, "❌ No project available to save", None
 
     parent = Path(str(parent_dir or "")).expanduser()
     if not str(parent_dir or "").strip():
-        return False, "❌ 请选择保存目录", None
+        return False, "❌ Please select a save directory", None
     if not parent.exists():
         try:
             parent.mkdir(parents=True, exist_ok=True)
         except Exception as exc:
-            return False, f"❌ 无法创建保存目录：{exc}", None
+            return False, f"❌ Could not create save directory: {exc}", None
     if not parent.is_dir():
-        return False, f"❌ 不是目录：{parent}", None
+        return False, f"❌ Not a directory: {parent}", None
     parent = parent.resolve()
 
     project_name = sanitize_hsf_project_name(hsf_name, fallback="")
     if not project_name:
-        return False, "❌ 请输入 HSF 文件夹名称", None
+        return False, "❌ Please enter an HSF folder name", None
 
     target_root = (parent / project_name).expanduser().resolve()
     if target_root.exists() and not target_root.is_dir():
-        return False, f"❌ 目标路径不是目录：{target_root}", None
+        return False, f"❌ Target path is not a directory: {target_root}", None
 
     current_root = None
     raw_root = getattr(proj, "root", None)
@@ -115,7 +115,7 @@ def save_project_to_hsf_dir(
     if target_root.exists() and target_root not in allowed_existing_roots:
         has_contents = any(target_root.iterdir())
         if has_contents:
-            return False, f"❌ 目标 HSF 目录已存在且不为空：{target_root}", None
+            return False, f"❌ Target HSF directory already exists and is not empty: {target_root}", None
 
     proj.name = project_name
     proj.work_dir = parent
@@ -130,7 +130,7 @@ def save_project_to_hsf_dir(
         except Exception:
             pass
 
-    return True, f"✅ 已保存 HSF 项目 `{saved_root}`", saved_root
+    return True, f"✅ HSF project saved: `{saved_root}`", saved_root
 
 
 def _prepare_project_for_compile(proj, gsm_name: str, work_dir: str) -> None:
@@ -207,7 +207,7 @@ def do_compile(
         })
         return ok, msg
     except Exception as e:
-        return False, f"❌ **错误**: {str(e)}"
+        return False, f"❌ **Error**: {str(e)}"
 
 
 def import_gsm(
@@ -221,17 +221,17 @@ def import_gsm(
     compiler = get_compiler_fn()
 
     if isinstance(compiler, mock_compiler_class):
-        return None, "❌ GSM 导入需要 LP_XMLConverter，Mock 模式不支持。请在侧边栏选择 LP 模式并指定路径。"
+        return None, "❌ GSM import requires LP_XMLConverter; Mock mode is not supported. Please select LP mode in the sidebar and specify the path."
 
-    bin_path = compiler.converter_path or "(未检测到)"
+    bin_path = compiler.converter_path or "(not detected)"
     if not compiler.is_available:
         return (
             None,
-            f"❌ LP_XMLConverter 未找到\n\n"
-            f"检测路径: `{bin_path}`\n\n"
-            f"macOS 正确路径示例:\n"
+            f"❌ LP_XMLConverter not found\n\n"
+            f"Detected path: `{bin_path}`\n\n"
+            f"Example of a correct macOS path:\n"
             f"`/Applications/GRAPHISOFT/ArchiCAD 28/LP_XMLConverter.app/Contents/MacOS/LP_XMLConverter`\n\n"
-            f"请在侧边栏手动填写正确路径。",
+            f"Please enter the correct path manually in the sidebar.",
         )
 
     tmp = Path(tempfile.mkdtemp())
@@ -243,23 +243,23 @@ def import_gsm(
     result = compiler.libpart2hsf(str(gsm_path), str(hsf_out))
 
     if not result.success:
-        diag = result.stderr or result.stdout or "(无输出)"
+        diag = result.stderr or result.stdout or "(no output)"
         shutil.rmtree(tmp, ignore_errors=True)
-        # 附加 Windows 特有诊断
+        # Append Windows-specific diagnostics
         extra = ""
         import platform
         if platform.system() == "Windows":
             extra = (
-                f"\n\n**Windows 诊断**:\n"
-                f"- 路径是否存在: {Path(compiler.converter_path).exists() if compiler.converter_path else False}\n"
-                f"- 是否为文件: {Path(compiler.converter_path).is_file() if compiler.converter_path else False}\n"
-                f"- 扩展名: {Path(compiler.converter_path).suffix if compiler.converter_path else ''}\n"
+                f"\n\n**Windows diagnostics**:\n"
+                f"- Path exists: {Path(compiler.converter_path).exists() if compiler.converter_path else False}\n"
+                f"- Is a file: {Path(compiler.converter_path).is_file() if compiler.converter_path else False}\n"
+                f"- Extension: {Path(compiler.converter_path).suffix if compiler.converter_path else ''}\n"
             )
         return (
             None,
-            f"❌ GSM 解包失败 (exit={result.exit_code})\n\n"
+            f"❌ GSM unpacking failed (exit={result.exit_code})\n\n"
             f"**Binary**: `{bin_path}`\n\n"
-            f"**输出**:\n```\n{diag[:800]}\n```{extra}",
+            f"**Output**:\n```\n{diag[:800]}\n```{extra}",
         )
 
     try:
@@ -284,8 +284,8 @@ def import_gsm(
             shutil.rmtree(tmp, ignore_errors=True)
             return (
                 None,
-                f"❌ 无法定位 HSF 根目录\n\n"
-                f"hsf_out 内容: `{[str(c.name) for c in contents]}`\n\n"
+                f"❌ Could not locate HSF root directory\n\n"
+                f"hsf_out contents: `{[str(c.name) for c in contents]}`\n\n"
                 f"stdout: {result.stdout[:300]}\nstderr: {result.stderr[:300]}",
             )
 
@@ -303,15 +303,15 @@ def import_gsm(
         loaded_proj = HSFProject.load_from_disk(str(project_dir))
         scripts_found = [s.value for s in loaded_proj.scripts]
         diag = (
-            f"\n\n**HSF 文件列表**: `{hsf_files}`"
-            f"\n**已识别脚本**: `{scripts_found}`"
+            f"\n\n**HSF file list**: `{hsf_files}`"
+            f"\n**Recognized scripts**: `{scripts_found}`"
         )
         return (
             project_dir,
-            f"✅ 已导入 `{loaded_proj.name}` — {len(loaded_proj.parameters)} 参数，{len(loaded_proj.scripts)} 脚本{diag}",
+            f"✅ Imported `{loaded_proj.name}` — {len(loaded_proj.parameters)} parameters, {len(loaded_proj.scripts)} scripts{diag}",
         )
     except Exception as e:
-        return None, f"❌ HSF 解析失败: {e}"
+        return None, f"❌ HSF parse failed: {e}"
     finally:
         shutil.rmtree(tmp, ignore_errors=True)
 
@@ -325,30 +325,30 @@ def handle_hsf_directory_load(
 ) -> tuple[bool, str]:
     raw_path = normalize_pasted_path_fn(project_dir)
     if not raw_path:
-        return False, "❌ 请输入 HSF 项目目录"
+        return False, "❌ Please enter an HSF project directory"
 
     input_dir = Path(raw_path).expanduser()
     hsf_dir = _resolve_hsf_project_dir(input_dir)
     if not hsf_dir.exists():
-        return False, f"❌ 目录不存在: {hsf_dir}"
+        return False, f"❌ Directory does not exist: {hsf_dir}"
     if not hsf_dir.is_dir():
-        return False, f"❌ 不是目录: {hsf_dir}"
+        return False, f"❌ Not a directory: {hsf_dir}"
     if not _looks_like_hsf_project(hsf_dir):
         candidates = _find_hsf_project_candidates(input_dir)
         if candidates:
             names = ", ".join(candidate.name for candidate in candidates[:8])
             suffix = "..." if len(candidates) > 8 else ""
-            return False, f"❌ 目录下有多个 HSF 项目，请选择其中一个: {names}{suffix}"
-        return False, f"❌ 不是有效 HSF 项目目录: {hsf_dir}"
+            return False, f"❌ Multiple HSF projects found in directory; please select one: {names}{suffix}"
+        return False, f"❌ Not a valid HSF project directory: {hsf_dir}"
 
     try:
         proj = load_project_from_disk_fn(str(hsf_dir))
     except Exception as e:
-        return False, f"❌ 载入 HSF 项目失败: {e}"
+        return False, f"❌ Failed to load HSF project: {e}"
 
     msg = (
-        f"✅ 已加载 HSF 项目 `{proj.name}` — {len(proj.parameters)} 参数，{len(proj.scripts)} 脚本"
-        f"\n\n源目录: `{hsf_dir}`"
+        f"✅ Loaded HSF project `{proj.name}` — {len(proj.parameters)} parameters, {len(proj.scripts)} scripts"
+        f"\n\nSource directory: `{hsf_dir}`"
     )
     return finalize_loaded_project_fn(proj, msg, pending_gsm_name=proj.name, preserve_project_root=True)
 
@@ -390,7 +390,7 @@ def handle_unified_import(
     if ext == ".gsm":
         imported_project, msg = import_gsm_fn(uploaded_file.read(), fname)
         if not imported_project:
-            detail = str(msg or "GSM 导入失败")
+            detail = str(msg or "GSM import failed")
             if detail.startswith("❌"):
                 return False, f"❌ [IMPORT_GSM] {detail[1:].strip()}"
             return False, f"❌ [IMPORT_GSM] {detail}"
@@ -405,8 +405,8 @@ def handle_unified_import(
             content = uploaded_file.read().decode("utf-8", errors="replace")
             proj = parse_gdl_source_fn(content, Path(fname).stem)
         except Exception as e:
-            return False, f"❌ 导入失败: {e}"
-        msg = f"✅ 已导入 GDL `{proj.name}` — {len(proj.parameters)} 参数，{len(proj.scripts)} 脚本"
+            return False, f"❌ Import failed: {e}"
+        msg = f"✅ Imported GDL `{proj.name}` — {len(proj.parameters)} parameters, {len(proj.scripts)} scripts"
 
     import_gsm_name = derive_gsm_name_from_filename_fn(fname) or proj.name
     if ext == ".gsm":
@@ -426,11 +426,11 @@ def handle_open_path(
 ) -> tuple[bool, str]:
     raw_path = normalize_pasted_path_fn(source_path)
     if not raw_path:
-        return False, "❌ 请选择要打开的文件或 HSF 项目目录"
+        return False, "❌ Please select a file or HSF project directory to open"
 
     path = Path(raw_path).expanduser()
     if not path.exists():
-        return False, f"❌ 路径不存在: {path}"
+        return False, f"❌ Path does not exist: {path}"
 
     if path.is_dir():
         return handle_hsf_directory_load(
@@ -441,11 +441,11 @@ def handle_open_path(
         )
 
     if not path.is_file():
-        return False, f"❌ 不支持的路径类型: {path}"
+        return False, f"❌ Unsupported path type: {path}"
 
     ext = path.suffix.lower()
     if ext not in {".gdl", ".txt", ".gsm"}:
-        return False, f"❌ 不支持的文件类型: {path.name}。请选择 .gdl、.txt、.gsm 文件，或 HSF 项目目录。"
+        return False, f"❌ Unsupported file type: {path.name}. Please select a .gdl, .txt, or .gsm file, or an HSF project directory."
 
     return handle_unified_import(
         _LocalPathUpload(path),

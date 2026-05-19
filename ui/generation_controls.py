@@ -4,17 +4,17 @@ from ui import state as ui_state
 
 
 def generation_stop_label(session_state) -> str:
-    return "停止生成中..." if session_state.get("generation_status") == "cancelling" else "停止生成"
+    return "Stopping generation..." if session_state.get("generation_status") == "cancelling" else "Stop Generation"
 
 
 def render_generation_controls(st, session_state) -> None:
     if not ui_state.is_generation_locked(session_state):
         return
     generation_id = session_state.get("active_generation_id")
-    st.warning("AI 正在生成中。涉及工程状态的操作已临时锁定。")
+    st.warning("AI generation is in progress. Operations that affect project state are temporarily locked.")
     if st.button(generation_stop_label(session_state), key="stop_generation", width="stretch"):
         if ui_state.request_generation_cancel(session_state, generation_id):
-            st.info("已请求停止当前生成，正在等待本轮调用安全结束。")
+            st.info("Stop requested. Waiting for the current call to finish safely.")
             st.rerun()
 
 
@@ -25,7 +25,7 @@ def guarded_event_update(session_state, status_ph, generation_id: str, method_na
 
 
 def generation_cancelled_message() -> str:
-    return "⏹️ 本轮生成已取消，未写入编辑器。"
+    return "⏹️ This generation round was cancelled and nothing was written to the editor."
 
 
 def consume_generation_result(session_state, generation_id: str) -> bool:

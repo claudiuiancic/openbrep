@@ -9,17 +9,17 @@ from ui.three_preview import render_three_preview_html
 
 def render_preview_2d(st, data: Preview2DResult, *, plotly_available: bool, go) -> None:
     if not data:
-        st.info("暂无 2D 预览数据。")
+        st.info("No 2D preview data available.")
         return
 
     count = len(data.lines) + len(data.polygons) + len(data.circles) + len(data.arcs)
     if count == 0:
-        st.info("2D 预览为空（脚本无可渲染几何，或命令未覆盖）。")
+        st.info("2D preview is empty (no renderable geometry in script, or commands not yet supported).")
         return
 
     if not plotly_available:
-        st.info("未安装 plotly，无法显示 2D 图形。请安装 ui 依赖后重试。")
-        st.caption(f"统计：线段 {len(data.lines)}，多边形 {len(data.polygons)}，圆 {len(data.circles)}，圆弧 {len(data.arcs)}")
+        st.info("plotly is not installed; cannot display 2D graphics. Install ui dependencies and try again.")
+        st.caption(f"Stats: lines {len(data.lines)}, polygons {len(data.polygons)}, circles {len(data.circles)}, arcs {len(data.arcs)}")
         return
 
     fig = go.Figure()
@@ -90,11 +90,11 @@ def render_preview_2d(st, data: Preview2DResult, *, plotly_available: bool, go) 
 
 def render_preview_3d(st, data: Preview3DResult, *, plotly_available: bool, go) -> None:
     if not data:
-        st.info("暂无 3D 预览数据。")
+        st.info("No 3D preview data available.")
         return
 
     if not data.meshes and not data.wires:
-        st.info("3D 预览为空（脚本无可渲染几何，或命令未覆盖）。")
+        st.info("3D preview is empty (no renderable geometry in script, or commands not yet supported).")
         return
 
     components.html(render_three_preview_html(data, height=500), height=510)
@@ -103,7 +103,7 @@ def render_preview_3d(st, data: Preview3DResult, *, plotly_available: bool, go) 
         with st.expander("Plotly fallback", expanded=False):
             _render_preview_3d_plotly(st, data, go=go)
     else:
-        st.caption(f"统计：网格 {len(data.meshes)}，线框 {len(data.wires)}")
+        st.caption(f"Stats: meshes {len(data.meshes)}, wires {len(data.wires)}")
 
 
 def _render_preview_3d_plotly(st, data: Preview3DResult, *, go) -> None:

@@ -31,7 +31,7 @@ def restore_last_project_snapshot(
 ) -> tuple[bool, str]:
     snap = session_state.get("last_project_snapshot")
     if not snap:
-        return (False, "❌ 没有可恢复的上一次 AI 写入")
+        return (False, "❌ No previous AI write to restore")
 
     session_state.project = deepcopy_fn(snap["project"])
     session_state.pending_gsm_name = snap.get("pending_gsm_name", "")
@@ -44,8 +44,8 @@ def restore_last_project_snapshot(
     session_state.preview_meta = {"kind": "", "timestamp": ""}
     clear_pending_preview_state(session_state)
     bump_main_editor_version_fn()
-    label = session_state.get("last_project_snapshot_label") or "AI 写入"
+    label = session_state.get("last_project_snapshot_label") or "AI write"
     session_state.last_project_snapshot = None
     session_state.last_project_snapshot_meta = {}
     session_state.last_project_snapshot_label = ""
-    return (True, f"✅ 已撤销上次 {label}")
+    return (True, f"✅ Undid last {label}")

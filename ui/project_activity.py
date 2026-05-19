@@ -8,9 +8,15 @@ MAX_PROJECT_ACTIVITY_LOG = 20
 
 def is_project_activity_message(content: str) -> bool:
     text = str(content or "").lstrip()
-    if text.startswith(("✅ 已导入", "✅ 已加载 HSF 项目", "❌ [IMPORT_GSM]")):
+    if text.startswith(("✅ Imported", "✅ Loaded HSF project", "❌ [IMPORT_GSM]",
+                         "✅ 已导入", "✅ 已加载 HSF 项目")):  # legacy Chinese patterns kept for backward compat
         return True
-    return "HSF 文件列表" in text or "源目录:" in text
+    return (
+        "HSF file list" in text
+        or "Source directory:" in text
+        or "HSF 文件列表" in text  # legacy
+        or "源目录:" in text  # legacy
+    )
 
 
 def record_project_activity(session_state, message: str) -> None:

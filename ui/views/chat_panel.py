@@ -30,7 +30,7 @@ def render_chat_panel(
     create_project_fn: Callable[[str], object],
     validate_chat_image_size_fn: Callable[[bytes, str], str | None],
 ) -> dict:
-    st.markdown("### AI 助手（生成与调试）")
+    st.markdown("### AI Assistant (Generation & Debug)")
     _render_header(st)
     _render_chat_record_launcher(
         st,
@@ -66,7 +66,7 @@ def render_chat_panel(
 
 
 def _render_header(st) -> None:
-    st.caption("描述需求，AI 自动创建 GDL 对象写入编辑器")
+    st.caption("Describe your requirements — the AI will automatically create a GDL object and write it to the editor.")
 
 
 def _render_chat_record_launcher(
@@ -85,7 +85,7 @@ def _render_chat_record_launcher(
     if not entries:
         return
 
-    if st.button(f"📚 聊天记录（{len(entries)}）", key="chat_record_browser_button", width="stretch"):
+    if st.button(f"📚 Chat History ({len(entries)})", key="chat_record_browser_button", width="stretch"):
         st.session_state.chat_record_browser_open = True
         st.rerun()
 
@@ -115,19 +115,19 @@ def _apply_chat_record_to_editor(
     save_as_hsf: bool,
 ) -> tuple[bool, str]:
     if not extracted:
-        return False, "未找到可注入的代码块"
+        return False, "No injectable code blocks found"
 
     project = st.session_state.get("project")
     safe_name = sanitize_hsf_name(hsf_name, fallback="chat_hsf")
     if save_as_hsf or project is None:
         if project is not None:
-            capture_last_project_snapshot_fn("聊天记录保存")
+            capture_last_project_snapshot_fn("Chat record save")
         project = create_project_fn(safe_name)
         st.session_state.project = project
         st.session_state.pending_gsm_name = safe_name
         st.session_state.script_revision = 0
     else:
-        capture_last_project_snapshot_fn("聊天记录注入")
+        capture_last_project_snapshot_fn("Chat record inject")
 
     applied_scripts, applied_params = apply_scripts_to_project_fn(project, extracted)
     if save_as_hsf:
@@ -135,8 +135,8 @@ def _apply_chat_record_to_editor(
     bump_main_editor_version_fn()
     st.session_state.chat_record_open_idx = None
     st.session_state.adopted_msg_index = msg_idx
-    label = "保存并注入" if save_as_hsf else "已注入编辑器"
-    return True, f"✅ {label}：{applied_scripts} 个脚本，{applied_params} 组参数"
+    label = "Saved and injected" if save_as_hsf else "Injected into editor"
+    return True, f"✅ {label}: {applied_scripts} script(s), {applied_params} parameter group(s)"
 
 
 def _return_to_chat_record_list(st) -> None:
@@ -174,7 +174,7 @@ def _render_chat_record_dialog(
         st.session_state.chat_record_open_idx = None
         idx = None
 
-    @st.dialog("📚 聊天记录")
+    @st.dialog("📚 Chat History")
     def _dialog() -> None:
         delete_idx = st.session_state.get("chat_record_delete_idx")
         if delete_idx is not None:
@@ -187,7 +187,7 @@ def _render_chat_record_dialog(
 
         selected_idx = st.session_state.get("chat_record_open_idx")
         if selected_idx is None:
-            st.caption("浏览并打开任一聊天记录，可复制、注入编辑器或保存为 HSF。")
+            st.caption("Browse and open any chat record to copy it, inject it into the editor, or save it as HSF.")
             with st.container(height=420, border=True):
                 for entry in reversed(entries):
                     row_idx = entry["index"]
@@ -195,21 +195,21 @@ def _render_chat_record_dialog(
                     with cols[0]:
                         st.caption(f"{entry['role_label']} · {entry['summary']}")
                     with cols[1]:
-                        if st.button("打开", key=f"chat_record_browser_open_{row_idx}", width="stretch"):
+                        if st.button("Open", key=f"chat_record_browser_open_{row_idx}", width="stretch"):
                             st.session_state.chat_record_open_idx = row_idx
                             st.rerun()
                     with cols[2]:
-                        if st.button("删除", key=f"chat_record_browser_delete_{row_idx}", width="stretch"):
+                        if st.button("Delete", key=f"chat_record_browser_delete_{row_idx}", width="stretch"):
                             st.session_state.chat_record_delete_idx = row_idx
                             st.rerun()
                     if row_idx > 0:
                         st.divider()
-            if st.button("关闭", width="stretch"):
+            if st.button("Close", width="stretch"):
                 _close_chat_record_browser(st)
             return
 
         msg = history[selected_idx]
-        record_role = "用户" if msg.get("role") == "user" else "助手"
+        record_role = "User" if msg.get("role") == "user" else "Assistant"
         record_text = st.session_state.get(f"chat_record_text_{selected_idx}") or str(msg.get("content") or "")
         extracted = extract_gdl_from_text_fn(record_text)
         suggested_name = suggest_hsf_name_from_chat_record(
@@ -221,9 +221,9 @@ def _render_chat_record_dialog(
         if not st.session_state.get(name_key):
             st.session_state[name_key] = suggested_name
 
-        st.caption(f"记录角色：{record_role}")
+        st.caption(f"Record role: {record_role}")
         edited_text = st.text_area(
-            "记录内容",
+            "Record Content",
             value=record_text,
             height=220,
             key=f"chat_record_text_{selected_idx}",
@@ -231,12 +231,12 @@ def _render_chat_record_dialog(
         )
         edited_extracted = extract_gdl_from_text_fn(edited_text)
         st.text_input(
-            "HSF 名称",
+            "HSF Name",
             value=sanitize_hsf_name(st.session_state.get(name_key, suggested_name)),
             key=name_key,
-            help="保存到 HSF 文件夹时使用的名称",
+            help="Name used when saving to an HSF folder",
         )
-        st.caption("代码块提取")
+        st.caption("Code Block Extraction")
         if edited_extracted:
             for path, code in edited_extracted.items():
                 st.text_area(
@@ -246,18 +246,18 @@ def _render_chat_record_dialog(
                     key=f"chat_record_code_{selected_idx}_{path}",
                 )
         else:
-            st.info("这条记录里没有可识别的代码块")
+            st.info("No recognizable code blocks found in this record")
 
         action_cols = st.columns([1, 1, 1, 1])
         with action_cols[0]:
-            if st.button("📋 复制全文", width="stretch"):
+            if st.button("📋 Copy All", width="stretch"):
                 ok, copy_msg = copy_text_to_system_clipboard_fn(edited_text)
                 if ok:
                     st.toast(copy_msg, icon="✅")
                 else:
                     st.warning(copy_msg)
         with action_cols[1]:
-            if st.button("📥 注入编辑器", type="primary", width="stretch"):
+            if st.button("📥 Inject into Editor", type="primary", width="stretch"):
                 ok, msg_text = _apply_chat_record_to_editor(
                     st=st,
                     msg_idx=selected_idx,
@@ -275,7 +275,7 @@ def _render_chat_record_dialog(
                 else:
                     st.error(msg_text)
         with action_cols[2]:
-            if st.button("💾 保存为 HSF", width="stretch"):
+            if st.button("💾 Save as HSF", width="stretch"):
                 ok, msg_text = _apply_chat_record_to_editor(
                     st=st,
                     msg_idx=selected_idx,
@@ -293,11 +293,11 @@ def _render_chat_record_dialog(
                 else:
                     st.error(msg_text)
         with action_cols[3]:
-            if st.button("删除", width="stretch"):
+            if st.button("Delete", width="stretch"):
                 st.session_state.chat_record_delete_idx = selected_idx
                 st.rerun()
 
-        if st.button("返回列表", width="stretch"):
+        if st.button("Back to List", width="stretch"):
             _return_to_chat_record_list(st)
 
     _dialog()
@@ -305,17 +305,17 @@ def _render_chat_record_dialog(
 
 def _render_chat_record_delete_confirm(st, *, delete_idx: int, history: list[dict]) -> None:
     if not (0 <= delete_idx < len(history)):
-        st.warning("这条聊天记录已不存在。")
-        if st.button("返回", width="stretch"):
+        st.warning("This chat record no longer exists.")
+        if st.button("Back", width="stretch"):
             st.session_state.chat_record_delete_idx = None
             st.rerun()
         return
 
     entry = build_chat_record_entries(history)[delete_idx]
-    st.warning(f"确认删除这条聊天记录？\n\n{entry['role_label']} · {entry['summary']}")
+    st.warning(f"Confirm deletion of this chat record?\n\n{entry['role_label']} · {entry['summary']}")
     confirm_col, cancel_col = st.columns(2)
     with confirm_col:
-        if st.button("确认删除", type="primary", width="stretch"):
+        if st.button("Confirm Delete", type="primary", width="stretch"):
             ok, msg = delete_chat_record_entry(
                 st.session_state,
                 delete_idx,
@@ -327,7 +327,7 @@ def _render_chat_record_delete_confirm(st, *, delete_idx: int, history: list[dic
             else:
                 st.error(msg)
     with cancel_col:
-        if st.button("取消", width="stretch"):
+        if st.button("Cancel", width="stretch"):
             st.session_state.chat_record_delete_idx = None
             st.rerun()
 
@@ -368,7 +368,7 @@ def _render_chat_history(
                     is_bridgeable_explainer_message_fn=is_bridgeable_explainer_message_fn,
                 )
             else:
-                if st.button("打开", key=f"chat_record_inline_open_{idx}", help="查看并回放这条记录"):
+                if st.button("Open", key=f"chat_record_inline_open_{idx}", help="View and replay this record"):
                     st.session_state.chat_record_browser_open = True
                     st.session_state.chat_record_open_idx = idx
 
@@ -384,7 +384,7 @@ def _render_assistant_message_actions(
 ) -> None:
     copy_col, redo_col, open_col, action_col = st.columns([1, 1, 1, 9])
     with copy_col:
-        if st.button("📋", key=f"copy_{idx}", help="复制本条回复"):
+        if st.button("📋", key=f"copy_{idx}", help="Copy this reply"):
             copy_text = copyable_chat_text_fn(msg)
             ok, copy_msg = copy_text_to_system_clipboard_fn(copy_text)
             if ok:
@@ -400,12 +400,12 @@ def _render_assistant_message_actions(
             ),
             None,
         )
-        if prev_user and st.button("🔄", key=f"redo_{idx}", help="重新生成"):
+        if prev_user and st.button("🔄", key=f"redo_{idx}", help="Regenerate"):
             st.session_state.chat_history = st.session_state.chat_history[:idx]
             st.session_state["_redo_input"] = prev_user
             st.rerun()
     with open_col:
-        if st.button("📂", key=f"open_{idx}", help="打开聊天记录"):
+        if st.button("📂", key=f"open_{idx}", help="Open chat record"):
             st.session_state.chat_record_browser_open = True
             st.session_state.chat_record_open_idx = idx
     with action_col:
@@ -431,11 +431,11 @@ def _render_assistant_primary_action(
         has_full_suite = "scripts/3d.gdl" in msg_raw and "paramlist.xml" in msg_raw
         if has_full_suite:
             is_adopted = st.session_state.adopted_msg_index == idx
-            adopt_label = "✅ 已采用" if is_adopted else "📥 采用这套"
+            adopt_label = "✅ Adopted" if is_adopted else "📥 Adopt This"
             if st.button(adopt_label, key=f"adopt_{idx}", width="stretch"):
                 st.session_state["_pending_adopt_idx"] = idx
     elif is_bridgeable:
-        if st.button("🪄 按此说明修改", key=f"bridge_modify_{idx}", width="stretch"):
+        if st.button("🪄 Modify Based on This", key=f"bridge_modify_{idx}", width="stretch"):
             st.session_state["_pending_bridge_idx"] = idx
             st.rerun()
 
@@ -448,27 +448,27 @@ def _render_adopt_dialog(
     apply_scripts_to_project_fn: Callable[[object, dict], tuple[int, int]],
     bump_main_editor_version_fn: Callable[[], int],
 ) -> None:
-    @st.dialog("📥 采用这套代码")
+    @st.dialog("📥 Apply This Code")
     def adopt_confirm_dialog(msg_idx):
-        st.warning("将按返回文件覆盖：命中的脚本/参数全覆盖写入，未命中的部分保留不变，确认？")
+        st.warning("This will overwrite based on the returned files: matched scripts/parameters will be fully overwritten, unmatched parts will remain unchanged. Confirm?")
         confirm_col, cancel_col = st.columns(2)
         with confirm_col:
-            if st.button("✅ 确认覆盖", type="primary", width="stretch"):
+            if st.button("✅ Confirm Overwrite", type="primary", width="stretch"):
                 msg_content = st.session_state.chat_history[msg_idx]["content"]
                 extracted = extract_gdl_from_text_fn(msg_content)
                 if extracted:
                     if st.session_state.project:
-                        capture_last_project_snapshot_fn("聊天代码采纳")
+                        capture_last_project_snapshot_fn("Chat code adoption")
                         apply_scripts_to_project_fn(st.session_state.project, extracted)
                     bump_main_editor_version_fn()
                     st.session_state.adopted_msg_index = msg_idx
                     st.session_state["_pending_adopt_idx"] = None
-                    st.toast("✅ 已写入编辑器", icon="📥")
+                    st.toast("✅ Written to editor", icon="📥")
                     st.rerun()
                 else:
-                    st.error("未找到可提取的代码块")
+                    st.error("No extractable code blocks found")
         with cancel_col:
-            if st.button("❌ 取消", width="stretch"):
+            if st.button("❌ Cancel", width="stretch"):
                 st.session_state["_pending_adopt_idx"] = None
                 st.rerun()
 
@@ -479,8 +479,8 @@ def _render_adopt_dialog(
 def _render_route_controls(st) -> str | None:
     st.session_state["_debug_mode_active"] = None
     st.radio(
-        "AI 模式",
-        ["自动", "强制生成", "强制调试"],
+        "AI Mode",
+        ["Auto", "Force Generate", "Force Debug"],
         horizontal=True,
         key="chat_route_mode",
     )
@@ -489,9 +489,9 @@ def _render_route_controls(st) -> str | None:
 
 def _read_chat_input(st, *, is_generation_locked_fn: Callable[[object], bool]) -> dict:
     if st.session_state.agent_running:
-        st.info("⏳ AI 生成中，请稍候...")
+        st.info("⏳ AI is generating, please wait...")
     chat_payload = st.chat_input(
-        "描述需求、提问，或搭配图片补充说明…",
+        "Describe your requirements, ask a question, or attach an image for additional context…",
         key="chat_main_input",
         accept_file=True,
         file_type=["jpg", "jpeg", "png", "webp", "gif"],

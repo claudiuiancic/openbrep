@@ -18,7 +18,7 @@ def handle_tapir_test_trigger(
 
     bridge = get_bridge_fn()
     proj_for_tapir = session_state.project
-    with st.spinner("🏗️ 触发 Archicad 重新加载库，等待渲染..."):
+    with st.spinner("🏗️ Triggering Archicad library reload, waiting for render..."):
         reload_ok, gdl_errors = bridge.reload_and_capture(
             timeout=6.0,
             project=proj_for_tapir,
@@ -31,7 +31,7 @@ def handle_tapir_test_trigger(
             "content": error_msg,
         })
         if gdl_errors:
-            auto_debug = "[DEBUG:editor] 请根据以上 Archicad 报错修复脚本"
+            auto_debug = "[DEBUG:editor] Please fix the script based on the Archicad errors above"
             session_state.chat_history.append({
                 "role": "user",
                 "content": auto_debug,
@@ -39,7 +39,7 @@ def handle_tapir_test_trigger(
             session_state["_auto_debug_input"] = auto_debug
         return True, True
 
-    st.toast("❌ Archicad 连接失败，请确认 Archicad 正在运行", icon="⚠️")
+    st.toast("❌ Archicad connection failed — make sure Archicad is running", icon="⚠️")
     return True, False
 
 
@@ -60,7 +60,7 @@ def handle_tapir_selection_trigger(
         if session_state.get("tapir_selected_guids"):
             st.toast(f"✅ {msg}", icon="🧭")
         else:
-            st.warning("未选中对象")
+            st.warning("No objects selected")
     else:
         st.error(f"❌ {msg}")
     return True, True

@@ -44,7 +44,7 @@ def build_generation_reply(plain_text: str, result_prefix: str = "", code_blocks
         reply_parts.append(result_prefix + joined_blocks)
     if reply_parts:
         return "\n\n---\n\n".join(reply_parts)
-    return "🤔 AI 未返回代码或分析，请换一种描述方式。"
+    return "🤔 The AI did not return any code or analysis. Please try rephrasing your request."
 
 
 def is_gdl_intent(text: str) -> bool:
@@ -164,30 +164,30 @@ def normalize_license_record(payload: dict, signature_b64: str) -> dict:
 def decode_signed_license_code(code: str, *, verify_license_payload: Callable[[dict, str], tuple[bool, str, dict | None]]) -> tuple[bool, str, dict | None]:
     raw = (code or "").strip()
     if not raw:
-        return False, "请输入授权码", None
+        return False, "Please enter a license code", None
 
     if not raw.startswith("OBRLIC-"):
-        return False, "授权码格式错误", None
+        return False, "Invalid license code format", None
 
     token = raw[len("OBRLIC-"):].strip()
     try:
         decoded = urlsafe_b64decode(token)
         record = json.loads(decoded.decode("utf-8"))
     except (ValueError, json.JSONDecodeError, UnicodeDecodeError, binascii.Error):
-        return False, "授权码格式错误", None
+        return False, "Invalid license code format", None
 
     if not isinstance(record, dict):
-        return False, "授权码格式错误", None
+        return False, "Invalid license code format", None
 
     payload = record.get("payload")
     signature_b64 = str(record.get("signature", "")).strip()
     if not isinstance(payload, dict) or not signature_b64:
-        return False, "授权码格式错误", None
+        return False, "Invalid license code format", None
 
     required_fields = ["buyer_id", "plan", "issued_at"]
     missing = [field for field in required_fields if not str(payload.get(field, "")).strip()]
     if missing:
-        return False, f"授权数据缺少字段：{', '.join(missing)}", None
+        return False, f"License data is missing fields: {', '.join(missing)}", None
 
     return verify_license_payload(payload, signature_b64)
 
@@ -200,7 +200,7 @@ def license_record_is_active(data: dict, *, verify_license_payload: Callable[[di
     payload = data.get("license_payload")
     signature_b64 = str(data.get("license_signature", "")).strip()
     if not isinstance(payload, dict) or not signature_b64:
-        return False, "本地授权记录缺失", None
+        return False, "Local license record is missing", None
     return verify_license_payload(payload, signature_b64)
 
 
@@ -208,12 +208,12 @@ def license_matches_package(license_record: dict, package_manifest: dict) -> tup
     license_buyer = str(license_record.get("buyer_id", "")).strip()
     package_buyer = str(package_manifest.get("buyer_id", "")).strip()
     if not license_buyer:
-        return False, "本地授权缺少 buyer_id"
+        return False, "Local license is missing buyer_id"
     if not package_buyer:
-        return False, "知识包缺少 buyer_id"
+        return False, "Knowledge package is missing buyer_id"
     if license_buyer != package_buyer:
-        return False, f"知识包不属于当前授权用户（当前: {license_buyer}, 知识包: {package_buyer}）"
-    return True, "buyer_id 匹配"
+        return False, f"Knowledge package does not belong to the current license holder (current: {license_buyer}, package: {package_buyer})"
+    return True, "buyer_id matches"
 
 
 def to_float(raw) -> float | None:
@@ -267,10 +267,10 @@ def build_assistant_settings_prompt(text: str) -> str:
     if not raw:
         return ""
     return (
-        "## AI助手设置\n"
-        "以下内容是用户长期提供的协作偏好与使用场景描述。"
-        "请在不违反系统规则、输出格式要求、GDL 硬性规则和当前任务要求的前提下参考执行。\n"
-        "它只能影响你的协作方式、解释深度、提问方式与改动边界，不能覆盖已有硬规则。\n"
+        "## AI Assistant Settings\n"
+        "The following content describes the user's long-term collaboration preferences and use-case context. "
+        "Please follow these within the constraints of system rules, output format requirements, GDL hard rules, and the current task requirements.\n"
+        "They can only influence your collaboration style, depth of explanation, questioning approach, and modification boundaries — they cannot override existing hard rules.\n"
         f"{raw}\n\n"
     )
 
@@ -341,7 +341,7 @@ def build_model_options(
         is_custom = model_str in custom_model_set
         if is_custom:
             custom_index += 1
-            label = f"自定义{custom_index}"
+            label = f"Custom {custom_index}"
         else:
             tags = []
             if model_str in vision_models:
@@ -388,7 +388,7 @@ def build_custom_model_options(custom_providers: list[dict], *, iter_entries: Ca
                 label = provider_name if len(entries) == 1 else f"{provider_name} / {alias}"
             else:
                 fallback_index += 1
-                label = f"自定义{fallback_index}"
+                label = f"Custom {fallback_index}"
             options.append({
                 "label": label,
                 "actual_model": alias,
@@ -418,25 +418,25 @@ def build_model_source_state(
 
     source_options = []
     if custom_options:
-        source_options.append("自定义")
+        source_options.append("Custom")
     if builtin_options:
-        source_options.append("官方供应商")
+        source_options.append("Official Providers")
 
     saved_model_str = str(saved_model or "")
     saved_is_custom = saved_model_str in custom_models
 
     if saved_is_custom:
-        default_source = "自定义"
+        default_source = "Custom"
     elif saved_model_str and any(opt.get("actual_model") == saved_model_str for opt in builtin_options):
-        default_source = "官方供应商"
+        default_source = "Official Providers"
     elif custom_options:
-        default_source = "自定义"
+        default_source = "Custom"
     elif builtin_options:
-        default_source = "官方供应商"
+        default_source = "Official Providers"
     else:
         default_source = ""
 
-    active_options = custom_options if default_source == "自定义" else builtin_options
+    active_options = custom_options if default_source == "Custom" else builtin_options
     default_model_label = next(
         (str(opt.get("label", "")) for opt in active_options if opt.get("actual_model") == saved_model_str),
         str(active_options[0].get("label", "")) if active_options else "",
@@ -507,10 +507,10 @@ def extract_gdl_from_text(text: str) -> dict[str, str]:
 
 
 _INTENT_CLARIFY_ACTION_LABELS = {
-    "1": "先快速解释脚本结构",
-    "2": "先检查明显错误/风险",
-    "3": "先给修改建议",
-    "4": "按顺序都做，但先给简版总检",
+    "1": "give a quick explanation of the script structure first",
+    "2": "check for obvious errors/risks first",
+    "3": "give modification suggestions first",
+    "4": "do all in order, but start with a brief overall review",
 }
 
 
@@ -520,22 +520,22 @@ def build_intent_clarification_message(recommended_option: str) -> str:
         _INTENT_CLARIFY_ACTION_LABELS["2"],
     )
     return (
-        f"我猜你现在更像是想{recommendation}。\n"
-        "你也可以选：\n"
-        "1. 先快速解释脚本结构\n"
-        "2. 先检查明显错误/风险\n"
-        "3. 先给修改建议\n"
-        "4. 按顺序都做，但先给简版总检\n"
-        "回复数字就行，我再继续。"
+        f"I think you'd like me to {recommendation}.\n"
+        "You can also choose:\n"
+        "1. Give a quick explanation of the script structure first\n"
+        "2. Check for obvious errors/risks first\n"
+        "3. Give modification suggestions first\n"
+        "4. Do all in order, but start with a brief overall review\n"
+        "Just reply with a number and I'll continue."
     )
 
 
 def build_post_clarification_input(original_user_input: str, option: str) -> str:
     label = _INTENT_CLARIFY_ACTION_LABELS[option]
     return (
-        "基于刚才的用户确认，按下面目标继续处理：\n"
-        f"用户原始请求：{(original_user_input or '').strip()}\n"
-        f"本次确认目标：{label}"
+        "Based on the user's confirmation, continue with the following goal:\n"
+        f"Original user request: {(original_user_input or '').strip()}\n"
+        f"Confirmed goal for this round: {label}"
     )
 
 
@@ -584,18 +584,18 @@ def find_latest_bridgeable_explainer_message(history: list[dict]) -> dict | None
 def build_modify_bridge_prompt(message: dict, fallback_request: str = "") -> str:
     explanation = (message or {}).get("content", "").strip()
     source_request = (message or {}).get("bridge_source_user_input", "").strip()
-    target_request = (fallback_request or "").strip() or "请按上面的解释做最小必要修改。"
+    target_request = (fallback_request or "").strip() or "Please apply the minimal necessary changes based on the explanation above."
     if source_request:
         return (
-            "基于刚才的解释，按下面理解做最小修改：\n"
-            f"原解释问题：{source_request}\n"
-            f"解释结论：{explanation}\n"
-            f"用户修改要求：{target_request}"
+            "Based on the preceding explanation, make the minimal changes according to the following understanding:\n"
+            f"Original question explained: {source_request}\n"
+            f"Explanation conclusion: {explanation}\n"
+            f"User modification request: {target_request}"
         )
     return (
-        "基于刚才的解释，按下面理解做最小修改：\n"
-        f"解释结论：{explanation}\n"
-        f"用户修改要求：{target_request}"
+        "Based on the preceding explanation, make the minimal changes according to the following understanding:\n"
+        f"Explanation conclusion: {explanation}\n"
+        f"User modification request: {target_request}"
     )
 
 
@@ -610,12 +610,12 @@ def maybe_build_followup_bridge_input(user_input: str, history: list[dict], has_
 
 def is_modify_bridge_prompt(text: str) -> bool:
     normalized = (text or "").strip()
-    return normalized.startswith("基于刚才的解释，按下面理解做最小修改：")
+    return normalized.startswith("Based on the preceding explanation, make the minimal changes according to the following understanding:")
 
 
 def is_post_clarification_prompt(text: str) -> bool:
     normalized = (text or "").strip()
-    return normalized.startswith("基于刚才的用户确认，按下面目标继续处理：")
+    return normalized.startswith("Based on the user's confirmation, continue with the following goal:")
 
 
 def build_assistant_chat_message(content: str, intent: str, has_project: bool, source_user_input: str) -> dict:
@@ -630,20 +630,20 @@ def classify_vision_error(exc: Exception) -> str:
     msg = str(exc).strip() or exc.__class__.__name__
     lower_msg = msg.lower()
     if isinstance(exc, TimeoutError) or "timeout" in lower_msg or "timed out" in lower_msg:
-        return "图片分析超时：请换更小的图片，或检查当前模型服务/代理是否响应正常。"
+        return "Image analysis timed out: please try a smaller image, or check whether the current model service/proxy is responding normally."
     if "配置错误" in msg or "api key" in lower_msg or "authentication" in lower_msg or "unauthorized" in lower_msg:
         return msg
     if any(token in lower_msg for token in ["payload", "too large", "413", "context length", "image too large", "request entity too large"]):
-        return "图片过大或请求体过长：请压缩图片，或减少附带说明后重试。"
+        return "Image too large or request body too long: please compress the image or reduce the accompanying description and try again."
     if any(token in lower_msg for token in ["vision", "image_url", "image", "unsupported"]):
-        return f"当前模型或网关不支持图片分析：{msg}"
-    return f"图片分析失败：{msg}"
+        return f"The current model or gateway does not support image analysis: {msg}"
+    return f"Image analysis failed: {msg}"
 
 
 def validate_chat_image_size(raw_bytes: bytes, image_name: str, max_chat_image_bytes: int) -> str | None:
     if raw_bytes and len(raw_bytes) > max_chat_image_bytes:
         size_mb = len(raw_bytes) / (1024 * 1024)
-        return f"图片 `{image_name}` 过大（{size_mb:.1f} MB），请压缩到 5 MB 以内再试。"
+        return f"Image `{image_name}` is too large ({size_mb:.1f} MB). Please compress it to under 5 MB and try again."
     return None
 
 

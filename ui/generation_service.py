@@ -107,7 +107,7 @@ class GenerationService:
             if not result.success:
                 status_ph.empty()
                 self.finish_generation_state_fn(self.session_state, generation_id, "failed")
-                return f"❌ **错误**: {result.error}"
+                return f"❌ **Error**: {result.error}"
 
             if not self.should_accept_generation_result_fn(self.session_state, generation_id):
                 status_ph.empty()
@@ -143,7 +143,7 @@ class GenerationService:
         except Exception as e:
             status_ph.empty()
             self.finish_generation_state_fn(self.session_state, generation_id, "failed")
-            return f"❌ **错误**: {str(e)}"
+            return f"❌ **Error**: {str(e)}"
 
     def _persist_object_plan_report(self, result, instruction: str, intent: str) -> None:
         project = getattr(result, "project", None)
@@ -182,7 +182,7 @@ class GenerationService:
         if self.is_modify_bridge_prompt_fn(user_input):
             return "MODIFY"
         if self.is_post_clarification_prompt_fn(user_input):
-            if "本次确认目标：先快速解释脚本结构" in user_input:
+            if "Confirmed goal for this round: give a quick explanation of the script structure first" in user_input:
                 return "CHAT"
             return "MODIFY"
         if self.is_explainer_intent_fn(user_input):
@@ -211,40 +211,40 @@ class GenerationService:
         if event_type == "analyze":
             scripts = data.get("affected_scripts", [])
             mode_tag = f" [Debug:{debug_type}]" if debug_mode else ""
-            self._guarded_event_update(status_ph, generation_id, "info", f"🔍 分析中{mode_tag}... 脚本: {', '.join(scripts)}")
+            self._guarded_event_update(status_ph, generation_id, "info", f"🔍 Analyzing{mode_tag}... Scripts: {', '.join(scripts)}")
         elif event_type == "attempt":
-            self._guarded_event_update(status_ph, generation_id, "info", "🧠 调用 AI...")
+            self._guarded_event_update(status_ph, generation_id, "info", "🧠 Calling AI...")
         elif event_type == "llm_response":
-            self._guarded_event_update(status_ph, generation_id, "info", f"✏️ 收到 {data['length']} 字符，解析中...")
+            self._guarded_event_update(status_ph, generation_id, "info", f"✏️ Received {data['length']} characters, parsing...")
         elif event_type == "validate":
             errors = data.get("errors", [])
             warnings = data.get("warnings", [])
             if errors:
-                self._guarded_event_update(status_ph, generation_id, "error", f"❌ 发现 {len(errors)} 个错误，AI 自动修复中...")
+                self._guarded_event_update(status_ph, generation_id, "error", f"❌ Found {len(errors)} error(s) — AI auto-fixing...")
             elif warnings:
-                self._guarded_event_update(status_ph, generation_id, "warning", f"⚠️ 发现 {len(warnings)} 条建议，已附在结果中")
+                self._guarded_event_update(status_ph, generation_id, "warning", f"⚠️ Found {len(warnings)} suggestion(s), appended to result")
             else:
-                self._guarded_event_update(status_ph, generation_id, "success", "✅ 校验通过")
+                self._guarded_event_update(status_ph, generation_id, "success", "✅ Validation passed")
         elif event_type == "rewrite":
             round_num = data.get("round", 2)
-            self._guarded_event_update(status_ph, generation_id, "info", f"🔄 第 {round_num} 轮修复中...")
+            self._guarded_event_update(status_ph, generation_id, "info", f"🔄 Fix round {round_num}...")
         elif event_type == "cancelled":
-            self._guarded_event_update(status_ph, generation_id, "warning", "⏹️ 正在停止当前生成...")
+            self._guarded_event_update(status_ph, generation_id, "warning", "⏹️ Stopping current generation...")
         elif event_type == "compile_result":
             if data.get("success"):
-                self._guarded_event_update(status_ph, generation_id, "success", "✅ 编译验证通过")
+                self._guarded_event_update(status_ph, generation_id, "success", "✅ Compilation validation passed")
             elif data.get("error"):
-                self._guarded_event_update(status_ph, generation_id, "warning", "⚠️ 编译验证失败，已附在结果中")
+                self._guarded_event_update(status_ph, generation_id, "warning", "⚠️ Compilation validation failed, appended to result")
         elif event_type == "status":
             self._guarded_event_update(status_ph, generation_id, "info", data.get("message", ""))
         elif event_type == "vision_analysis_done":
             component = data.get("component_type", "")
-            label = f"「{component}」" if component and component != "未知构件" else ""
-            self._guarded_event_update(status_ph, generation_id, "info", f"🖼️ 图像分析完成{label}，正在生成 GDL…")
+            label = f" [{component}]" if component and component != "Unknown component" else ""
+            self._guarded_event_update(status_ph, generation_id, "info", f"🖼️ Image analysis complete{label}, generating GDL…")
         elif event_type == "object_plan_done":
             object_type = data.get("object_type", "")
-            label = f"「{object_type}」" if object_type else ""
-            self._guarded_event_update(status_ph, generation_id, "info", f"📐 对象规划完成{label}，正在生成 GDL…")
+            label = f" [{object_type}]" if object_type else ""
+            self._guarded_event_update(status_ph, generation_id, "info", f"📐 Object plan complete{label}, generating GDL…")
 
 
 def _strip_force_generate_prefix(user_input: str) -> tuple[str, bool]:

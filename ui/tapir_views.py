@@ -10,28 +10,28 @@ def render_tapir_inspector_panel(*, session_state, caption_fn: Callable[[str], N
     last_error = session_state.get("tapir_last_error", "")
 
     if last_sync:
-        caption_fn(f"最近同步：{last_sync}")
+        caption_fn(f"Last synced: {last_sync}")
     if last_error:
         warning_fn(last_error)
 
     if not guids:
-        info_fn("未读取到 Archicad 选中对象。请先在左侧「Archicad 实机联动」中点击「读取选中」。")
+        info_fn("No Archicad selection found. Click \"Read Selection\" in the Archicad Live Link section on the left first.")
         return
 
-    markdown_fn(f"**已读取 {len(guids)} 个选中对象**")
+    markdown_fn(f"**{len(guids)} selected object(s) loaded**")
     code_fn("\n".join(guids), "text")
 
-    markdown_fn("**对象详情**")
+    markdown_fn("**Object Details**")
     if details:
         json_fn(details)
     else:
-        caption_fn("暂无元素详情。")
+        caption_fn("No element details available.")
 
 
 def render_tapir_param_workbench_panel(*, session_state, info_fn: Callable[[str], None], expander_fn: Callable[..., object], text_input_fn: Callable[..., str]) -> None:
     rows = session_state.get("tapir_selected_params") or []
     if not rows:
-        info_fn("暂无可写回参数。请先在左侧「Archicad 实机联动」中点击「读参数」。")
+        info_fn("No writable parameters available. Click \"Read Params\" in the Archicad Live Link section on the left first.")
         return
 
     edits = session_state.get("tapir_param_edits") or {}
@@ -41,14 +41,14 @@ def render_tapir_param_workbench_panel(*, session_state, info_fn: Callable[[str]
         for row in rows
         if isinstance(row.get("gdlParameters"), list)
     )
-    info_fn(f"已读取 {object_count} 个对象、{param_count} 个参数。修改后点击左侧「写参数」写回 Archicad。")
+    info_fn(f"Loaded {object_count} object(s) with {param_count} parameter(s). After editing, click \"Write Params\" on the left to write back to Archicad.")
     for row in rows:
         guid = (row.get("guid") or "").strip()
         params = row.get("gdlParameters")
         if not guid or not isinstance(params, list):
             continue
 
-        with expander_fn(f"对象 {guid} · {len(params)} 个参数", expanded=object_count == 1):
+        with expander_fn(f"Object {guid} · {len(params)} parameters", expanded=object_count == 1):
             for p in params:
                 if not isinstance(p, dict):
                     continue

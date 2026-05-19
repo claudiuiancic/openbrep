@@ -34,7 +34,7 @@ class ProjectService:
             try:
                 sync_visible_editor_buffers_fn(proj)
             except Exception as exc:
-                return False, f"❌ **错误**: 同步编辑器内容失败：{exc}"
+                return False, f"❌ **Error**: Failed to sync editor content: {exc}"
 
         ok, msg = project_io.do_compile(
             proj,
@@ -74,7 +74,7 @@ class ProjectService:
 
     def browse_and_load_hsf_directory(self) -> tuple[bool, str]:
         if self.choose_directory_fn is None:
-            return False, "❌ 当前运行环境不支持本地目录选择，请使用支持系统目录选择器的桌面环境"
+            return False, "❌ The current environment does not support local directory selection; please use a desktop environment with a system directory picker"
 
         if hasattr(self.session_state, "get"):
             initial_dir = self.session_state.get("editor_hsf_dir", "")
@@ -125,7 +125,7 @@ class ProjectService:
     def browse_and_open_project_source(self) -> tuple[bool, str]:
         chooser = self.choose_path_fn or self.choose_directory_fn
         if chooser is None:
-            return False, "❌ 当前运行环境不支持本地文件/目录选择，请在本机桌面环境运行 OpenBrep"
+            return False, "❌ The current environment does not support local file/directory selection; please run OpenBrep in a local desktop environment"
 
         initial_dir = ""
         if hasattr(self.session_state, "get"):
@@ -151,7 +151,7 @@ class ProjectService:
     def browse_and_open_project_file(self) -> tuple[bool, str]:
         chooser = self.choose_file_fn or self.choose_path_fn
         if chooser is None:
-            return False, "❌ 当前运行环境不支持本地文件选择，请在本机桌面环境运行 OpenBrep"
+            return False, "❌ The current environment does not support local file selection; please run OpenBrep in a local desktop environment"
 
         initial_dir = ""
         if hasattr(self.session_state, "get"):
@@ -219,7 +219,7 @@ class ProjectService:
             try:
                 sync_visible_editor_buffers_fn(proj)
             except Exception as exc:
-                return False, f"❌ 同步编辑器内容失败：{exc}"
+                return False, f"❌ Failed to sync editor content: {exc}"
 
         source_root = self.session_state.get("active_hsf_source_dir", "") if hasattr(self.session_state, "get") else getattr(self.session_state, "active_hsf_source_dir", "")
         ok, msg, saved_root = project_io.save_project_to_hsf_dir(

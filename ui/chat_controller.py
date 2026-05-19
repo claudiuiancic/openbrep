@@ -33,9 +33,9 @@ def maybe_record_conversation_error_learning(session_state, text: str | None) ->
             text,
             source="conversation_error_fragment",
             project_name=project_name,
-            instruction="用户在聊天中提供的脚本错误提示，后续生成需避免同类问题。",
+            instruction="Script error provided by the user in chat; future generation runs should avoid the same class of issues.",
         )
-        session_state["learning_notice"] = "已加入错题本"
+        session_state["learning_notice"] = "Added to error notes"
         return True
     except Exception:
         return False
@@ -86,15 +86,15 @@ def summarize_learning_from_chat_request(session_state, text: str, llm_refiner=N
         session_state["learning_notice"] = result.message
         return (
             f"{result.message}\n\n"
-            f"已写入：`{result.path}`\n\n"
-            "说明：整理链路先用确定性规则扫描聊天记录和已有编译/报错记录，"
-            "再把可验证事实压缩成后续生成会自动注入的本地 Skill；"
-            "如果可用，会额外调用 LLM 做二阶段专业化改写，失败则回退到规则整理。"
+            f"Written to: `{result.path}`\n\n"
+            "Note: the consolidation pipeline first scans chat records and existing compile/error logs using deterministic rules, "
+            "then compresses verifiable facts into a local Skill that will be automatically injected into future generation runs. "
+            "If available, an LLM is called for a second-pass specialization rewrite; on failure it falls back to rule-based consolidation."
         )
     session_state["learning_notice"] = result.message
     return (
         f"{result.message}\n\n"
-        "我已经检查当前工作区的聊天记录和错题记录，但没有发现可整理的 GDL 报错线索。"
+        "I have checked the current workspace chat records and error notes but found no GDL error patterns that could be consolidated."
     )
 
 
@@ -122,7 +122,7 @@ def handle_elicitation_route(
         session_state.elicitation_state = agent.state.value
         if not session_state.project:
             make_generation_project_fn(gdl_obj_name or object_name or "elicited_object")
-            info_fn(f"📁 已初始化项目 `{session_state.pending_gsm_name}`")
+            info_fn(f"📁 Project initialized: `{session_state.pending_gsm_name}`")
         project = session_state.project
         effective_gsm = session_state.pending_gsm_name or project.name
         return run_agent_generate_fn(
@@ -138,7 +138,7 @@ def handle_elicitation_route(
             spec = agent.confirm(True)
             session_state.elicitation_state = agent.state.value
             if spec is None:
-                return "❌ 规格确认失败，请重试。", True
+                return "❌ Spec confirmation failed, please try again.", True
             return handle_elicitation_route(
                 user_input=user_input,
                 gdl_obj_name=spec.object_name,
@@ -236,7 +236,7 @@ def process_chat_turn(
     if clear_debug_mode:
         session_state["_debug_mode_active"] = None
     if toast_missing_debug_text:
-        st.toast("请输入问题描述后再发送，或直接描述你看到的现象", icon="💬")
+        st.toast("Please enter a problem description before sending, or describe what you observe directly", icon="💬")
 
     if user_input and not (session_state.pending_gsm_name or "").strip():
         gsm_candidate = detect_gsm_name_candidate_fn(user_input)
@@ -270,11 +270,11 @@ def process_chat_turn(
                     llm_refiner=learning_refine_fn,
                 )
             except Exception as exc:
-                msg = f"整理错题本失败：{exc}"
+                msg = f"Error note consolidation failed: {exc}"
                 session_state["learning_notice"] = msg
             session_state.chat_history.append({"role": "assistant", "content": msg})
             persist_new_chat_messages(session_state, chat_start_index)
-            st.toast("错题本整理完成" if "失败" not in msg else "错题本整理失败", icon="🧠")
+            st.toast("Error notes consolidated" if "failed" not in msg.lower() else "Error note consolidation failed", icon="🧠")
             st.rerun()
             return
 

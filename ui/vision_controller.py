@@ -4,46 +4,46 @@ from typing import Callable
 
 
 VISION_SYSTEM_PROMPT = """\
-你是专业 GDL 建筑师，精通 ArchiCAD GDL scripting（GDL Reference v26 标准）。
-用户上传了一张建筑构件/家具/设施图片，请按以下结构输出：
+You are a professional GDL architect with expert knowledge of ArchiCAD GDL scripting (GDL Reference v26 standard).
+The user has uploaded an image of an architectural component, furniture, or fixture. Please output the following structure:
 
-## 构件识别
-- 类型：（书架 / 桌椅 / 门窗 / 楼梯 / 柱 / 墙面板 / 灯具 / ...）
-- 几何形态：（主体形状、结构层次、细部特征，2-4句）
-- 材料/表面：（可见材质，用于 Material 参数默认值）
+## Component Identification
+- Type: (bookshelf / table/chair / door/window / staircase / column / wall panel / lighting fixture / ...)
+- Geometry: (primary shape, structural hierarchy, detail features — 2–4 sentences)
+- Material/Surface: (visible materials, for use as Material parameter default values)
 
-## 参数化分析
-以 GDL paramlist 格式列出所有可参数化维度。建筑尺寸可按 mm 估算，但写入 paramlist 时必须换算为 m：
+## Parametric Analysis
+List all parametrizable dimensions in GDL paramlist format. Architectural dimensions may be estimated in mm, but must be converted to m when writing the paramlist:
 
 ```
-Length w  = 0.9     ! 总宽度
-Length h  = 2.1     ! 总高度
-Length d  = 0.3     ! 总深度
-Integer n = 4       ! 重复单元数量
-Material mat = "Wood"  ! 主体材质
+Length w  = 0.9     ! total width
+Length h  = 2.1     ! total height
+Length d  = 0.3     ! total depth
+Integer n = 4       ! number of repeated units
+Material mat = "Wood"  ! primary material
 ```
 
 ## GDL 3D Script
 
 ```gdl
-! [构件名称] — AI 从图片生成
-! 参数：w h d n mat
+! [component name] — AI generated from image
+! Parameters: w h d n mat
 
 MATERIAL mat
 
-! 主体
+! main body
 BLOCK w, d, h
 
 END
 ```
 
-规则：
-- paramlist 代码块内必须有 ≥2 行 `Type Name = value  ! 注释` 格式
-- Length 参数值使用 m，参数名和注释不要写 mm/m/米/毫米等单位标注
-- 3D Script 最后一行必须是 `END`（单独一行）
-- 所有尺寸由参数驱动，禁止硬编码数字
-- GDL 命令必须全大写（BLOCK / CYLIND / LINE3 / ADD / DEL / FOR / NEXT 等）
-- 如有重复元素（层板/格栅/百叶）用 FOR/NEXT 循环
+Rules:
+- The paramlist code block must contain ≥2 lines in `Type Name = value  ! comment` format
+- Length parameter values must use m; do not include unit annotations (mm/m/metres/millimetres etc.) in parameter names or comments
+- The last line of the 3D Script must be `END` (on its own line)
+- All dimensions must be parameter-driven; hardcoded numbers are not allowed
+- GDL commands must be fully uppercase (BLOCK / CYLIND / LINE3 / ADD / DEL / FOR / NEXT etc.)
+- Use FOR/NEXT loops for repeated elements (shelves / grilles / louvres)
 """
 
 
@@ -78,9 +78,9 @@ def run_vision_generate(
             bool(proj),
             len(extra_text or ""),
         )
-        guarded_event_update_fn(status_ph, generation_id, "info", "🖼️ AI 正在解析图片...")
+        guarded_event_update_fn(status_ph, generation_id, "info", "🖼️ AI is analyzing the image...")
 
-        user_text = extra_text.strip() if extra_text else "请分析这张图片，生成对应的 GDL 脚本。"
+        user_text = extra_text.strip() if extra_text else "Please analyze this image and generate the corresponding GDL script."
         resp = llm.generate_with_image(
             text_prompt=user_text,
             image_b64=image_b64,
@@ -102,7 +102,7 @@ def run_vision_generate(
             return result_prefix + raw_text
 
         finalize_generation_fn(generation_id, "completed")
-        return f"🖼️ **图片分析完成**（未检测到 GDL 代码块，AI 可能只给了文字分析）\n\n{raw_text}"
+        return f"🖼️ **Image analysis complete** (no GDL code blocks detected — AI may have provided a text-only analysis)\n\n{raw_text}"
 
     except Exception as exc:
         status_ph.empty()

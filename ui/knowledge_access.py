@@ -79,7 +79,7 @@ def _save_license(work_dir: str, data: dict) -> None:
 def _load_pro_public_key(root: Path):
     key_file = root / "openbrep" / "public_keys" / "pro_public.pem"
     if not key_file.exists():
-        raise FileNotFoundError(f"缺少公钥文件：{key_file}")
+        raise FileNotFoundError(f"Missing public key file: {key_file}")
     return serialization.load_pem_public_key(key_file.read_bytes())
 
 
@@ -104,9 +104,9 @@ def _verify_license_payload(payload: dict, signature_b64: str, *, root: Path | N
     if expire_date:
         try:
             if datetime.now().date() > datetime.strptime(expire_date, "%Y-%m-%d").date():
-                return False, "授权码已过期", None
+                return False, "License key has expired", None
         except ValueError:
-            return False, "授权日期格式无效", None
+            return False, "Invalid license date format", None
 
     try:
         project_root = root or Path(__file__).parent.parent
@@ -121,13 +121,13 @@ def _verify_license_payload(payload: dict, signature_b64: str, *, root: Path | N
     except FileNotFoundError as e:
         return False, str(e), None
     except (ValueError, binascii.Error):
-        return False, "授权码格式错误", None
+        return False, "Invalid license key format", None
     except InvalidSignature:
-        return False, "授权签名无效", None
+        return False, "Invalid license signature", None
     except Exception as e:
-        return False, f"授权校验失败: {e}", None
+        return False, f"License verification failed: {e}", None
 
-    return True, "授权码有效", _normalize_license_record(payload, signature_b64)
+    return True, "License key is valid", _normalize_license_record(payload, signature_b64)
 
 
 def _decode_signed_license_code(code: str, *, root: Path | None = None) -> tuple[bool, str, dict | None]:
@@ -157,23 +157,23 @@ def _verify_pro_package(unpacked_dir: Path, *, root: Path | None = None) -> tupl
     docs_dir = unpacked_dir / "docs"
 
     if not manifest_path.exists() or not signature_path.exists():
-        return False, "知识包缺少 manifest.json 或 signature.sig", None
+        return False, "Knowledge package is missing manifest.json or signature.sig", None
     if not docs_dir.exists() or not docs_dir.is_dir():
-        return False, "知识包缺少 docs 目录", None
+        return False, "Knowledge package is missing the docs directory", None
 
     try:
         manifest_bytes = manifest_path.read_bytes()
         manifest = json.loads(manifest_bytes.decode("utf-8"))
     except Exception:
-        return False, "知识包 manifest 无法解析", None
+        return False, "Could not parse knowledge package manifest", None
 
     if not isinstance(manifest, dict):
-        return False, "知识包 manifest 格式错误", None
+        return False, "Invalid knowledge package manifest format", None
 
     required_fields = ["buyer_id", "plan", "issued_at"]
     missing = [field for field in required_fields if not str(manifest.get(field, "")).strip()]
     if missing:
-        return False, f"知识包 manifest 缺少字段：{', '.join(missing)}", None
+        return False, f"Knowledge package manifest is missing fields: {', '.join(missing)}", None
 
     try:
         project_root = root or Path(__file__).parent.parent
@@ -187,19 +187,19 @@ def _verify_pro_package(unpacked_dir: Path, *, root: Path | None = None) -> tupl
     except FileNotFoundError as e:
         return False, str(e), None
     except InvalidSignature:
-        return False, "知识包签名无效", None
+        return False, "Invalid knowledge package signature", None
     except Exception as e:
-        return False, f"知识包验签失败：{e}", None
+        return False, f"Knowledge package signature verification failed: {e}", None
 
     expire_date = str(manifest.get("expire_date", "")).strip()
     if expire_date:
         try:
             if datetime.now().date() > datetime.strptime(expire_date, "%Y-%m-%d").date():
-                return False, "知识包已过期", None
+                return False, "Knowledge package has expired", None
         except ValueError:
-            return False, "知识包日期格式无效", None
+            return False, "Invalid knowledge package date format", None
 
-    return True, "知识包验签通过", manifest
+    return True, "Knowledge package signature verified", manifest
 
 
 def _license_matches_package(license_record: dict, package_manifest: dict) -> tuple[bool, str]:
@@ -208,16 +208,16 @@ def _license_matches_package(license_record: dict, package_manifest: dict) -> tu
 
 def _import_pro_knowledge_zip(file_bytes: bytes, filename: str, work_dir: str, *, root: Path | None = None) -> tuple[bool, str]:
     if not filename.lower().endswith((".zip", ".obrk")):
-        return False, "仅支持 .zip 或 .obrk 知识包"
+        return False, "Only .zip or .obrk knowledge packages are supported"
 
     license_record = _load_license(work_dir)
     if not bool(license_record.get("pro_unlocked", False)):
-        return False, "请先激活 Pro 后再导入知识包"
+        return False, "Please activate Pro before importing a knowledge package"
 
     ok, msg, normalized_license = _license_record_is_active(license_record, root=root)
     if not ok or normalized_license is None:
         _save_license(work_dir, _empty_license_record())
-        return False, f"请先重新激活 Pro：{msg}"
+        return False, f"Please re-activate Pro first: {msg}"
 
     _save_license(work_dir, normalized_license)
 
@@ -237,11 +237,11 @@ def _import_pro_knowledge_zip(file_bytes: bytes, filename: str, work_dir: str, *
         unpacked = tmp / "unpacked"
         ok, msg, manifest = _verify_pro_package(unpacked, root=root)
         if not ok or manifest is None:
-            return False, f"❌ 导入失败：{msg}"
+            return False, f"❌ Import failed: {msg}"
 
         ok, msg = _license_matches_package(normalized_license, manifest)
         if not ok:
-            return False, f"❌ 导入失败：{msg}"
+            return False, f"❌ Import failed: {msg}"
 
         docs_dir = unpacked / "docs"
         if target.exists():
@@ -255,9 +255,9 @@ def _import_pro_knowledge_zip(file_bytes: bytes, filename: str, work_dir: str, *
             else:
                 shutil.copy2(item, dest)
 
-        return True, f"✅ Pro 知识包导入完成：{target}"
+        return True, f"✅ Pro knowledge package imported successfully: {target}"
     except Exception as e:
-        return False, f"❌ 导入失败：{e}"
+        return False, f"❌ Import failed: {e}"
     finally:
         if tmp.exists():
             try:
