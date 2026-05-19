@@ -52,6 +52,18 @@ Current macOS package compatibility: Apple Silicon only (`arm64`, M1/M2/M3/M4), 
 
 On macOS, unzip it, open the `OpenBrep` folder, and double-click `OpenBrep.command`. On Windows, unzip it and run `OpenBrep.exe`. This path does not require users to learn `git clone`, `git pull`, or manual Python dependency installation first.
 
+Temporary macOS Gatekeeper workaround:
+
+The current macOS zip is not yet Developer ID signed and notarized. If macOS shows security warnings or blocks the app even after you confirm the prompts, remove the quarantine flag from the unzipped folder:
+
+```bash
+xattr -dr com.apple.quarantine /path/to/OpenBrep
+```
+
+Tip: type `xattr -dr com.apple.quarantine ` in Terminal, keep the trailing space, drag the unzipped `OpenBrep` folder into Terminal, then press Enter. After that, run `OpenBrep.command` again.
+
+We are preparing a properly signed and notarized macOS package so this manual step will not be needed.
+
 ### 命令行安装（高级用户）
 
 OpenBrep 是 Python 应用。正式发布到 PyPI 后，推荐用隔离工具安装：

@@ -43,6 +43,18 @@
 
 macOS 解压后进入 `OpenBrep` 文件夹，双击 `OpenBrep.command`；Windows 解压后运行 `OpenBrep.exe`。这种方式不要求用户先学会 `git clone`、`git pull` 或手动安装 Python 依赖。
 
+macOS Gatekeeper 临时处理办法：
+
+当前 macOS zip 还没有完成 Developer ID 签名和 Apple 公证。如果 macOS 提示“无法验证开发者”、出现多个安全提示，或确认后仍然打不开，请先对解压后的 `OpenBrep` 文件夹移除隔离属性：
+
+```bash
+xattr -dr com.apple.quarantine /path/to/OpenBrep
+```
+
+也可以在终端里先输入 `xattr -dr com.apple.quarantine `，保留最后的空格，然后把解压后的 `OpenBrep` 文件夹拖进终端，回车执行。执行后再运行 `OpenBrep.command`。
+
+我们会准备正式签名并公证的 macOS 包，届时不再需要这个手动步骤。
+
 ### 命令行安装（高级用户）
 
 正式发布到 PyPI 后，推荐用隔离工具安装：

@@ -35,6 +35,16 @@ macOS 解压后进入 `OpenBrep` 文件夹，双击 `OpenBrep.command` 启动；
 
 macOS 第一次运行如果提示来自未知开发者，请右键 `OpenBrep.command`，选择“打开”，再在系统提示里确认。启动后浏览器会自动打开 OpenBrep；如果没有自动打开，默认访问 `http://127.0.0.1:8501`，或查看终端窗口里显示的本机地址。
 
+如果仍然打不开，通常是因为当前 macOS zip 还没有完成 Developer ID 签名和 Apple 公证，Gatekeeper 会把浏览器下载的包标记为隔离。临时处理办法：
+
+```bash
+xattr -dr com.apple.quarantine /path/to/OpenBrep
+```
+
+更简单的做法：在终端里输入 `xattr -dr com.apple.quarantine `，注意最后留一个空格，然后把解压后的 `OpenBrep` 文件夹拖进终端，回车执行。完成后再双击 `OpenBrep.command`。
+
+我们会准备正式签名并公证的 macOS 包，届时不再需要这个手动步骤。
+
 ### 命令行方式：pipx / uv
 
 正式发布到 PyPI 后，推荐：
