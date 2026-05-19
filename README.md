@@ -28,15 +28,11 @@
 
 You wrote some GDL code in AI and want to test it in ArchiCAD. Traditional path:
 
-``` Open the Library Object Editor → Manually fill in parameters → Switch between 5 Script windows → Paste the code → Compile
-
-```
+``` Open the Library Object Editor → Manually fill in parameters → Switch between 5 Script windows → Paste the code → Compile ```
 
 **openbrep compresses this process to:**
 
-``` Describe your requirements (Chinese/English are both acceptable) → AI generates and fills in the script box → One-click compilation → Drag the .gsm file into ArchiCAD
-
-```
+``` Describe your requirements (Chinese/English are both acceptable) → AI generates and fills in the script box → One-click compilation → Drag the .gsm file into ArchiCAD ```
 
 Or import an existing .gsm file and let AI help you debug, refactor, and add parameters.
 
